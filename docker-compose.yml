@@ -4,6 +4,12 @@ services:
     container_name: moni
     restart: unless-stopped
     env_file: .env
+    # Bind-mount des eigenen Git-Checkouts, damit propose_code_change
+    # (Selbst-Weiterentwicklung, moni/self_dev.py) auf dem echten
+    # Arbeitsverzeichnis branchen/committen kann - passe den Host-Pfad
+    # links an dein Setup an, falls er nicht ".".
+    volumes:
+      - .:/repo
     # Fall B (Reverse-Proxy läuft direkt auf dem Host, nicht containerisiert):
     # bindet nur an localhost des Droplets - dein Host-Caddy/nginx spricht
     # dann mit http://127.0.0.1:8010.

@@ -137,6 +137,26 @@ TOOLS = [
         },
     },
     {
+        "name": "propose_code_change",
+        "description": (
+            "Use the Claude coding agent to implement a change to Moni's own "
+            "source code, on a new git branch (never the live branch). Does "
+            "NOT push, merge, or redeploy - the user reviews and deploys "
+            "manually. Use only when the user explicitly asks for a code "
+            "change or new feature to be implemented in Moni herself."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "description": "Clear description of the change to implement.",
+                }
+            },
+            "required": ["description"],
+        },
+    },
+    {
         "name": "set_location",
         "description": (
             "Save the user's home city/location, e.g. after they mention "
@@ -191,7 +211,7 @@ TOOLS = [
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
 # are expected to gate these behind a confirmation step before calling
 # run_tool; this module only executes.
-CONFIRM_REQUIRED = {"run_shell_command", "write_file"}
+CONFIRM_REQUIRED = {"run_shell_command", "write_file", "propose_code_change"}
 
 # Tools safe to run unattended (e.g. the scheduled morning briefing) - never
 # any tool from CONFIRM_REQUIRED, so an automated run can never end up
@@ -227,6 +247,10 @@ def run_tool(name, tool_input):
             return widgets.pin(tool_input["title"], tool_input["content"])
         if name == "unpin_from_dashboard":
             return widgets.unpin(tool_input["title_substring"])
+        if name == "propose_code_change":
+            from . import self_dev  # local import: heavier optional dependency
+
+            return self_dev.propose_change(tool_input["description"])
         return f"Unbekanntes Tool: {name}"
     except Exception as e:
         return f"Fehler: {e}"

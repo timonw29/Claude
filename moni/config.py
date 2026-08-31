@@ -19,6 +19,15 @@ ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
 
+# Full git checkout of Moni's own repo, bind-mounted into the container so
+# self-development sessions operate on the real working tree (see
+# docker-compose.yml). Never the same thing as /app, which is a build-time
+# snapshot of just the moni/ package.
+REPO_PATH = os.environ.get("MONI_REPO_PATH", "/repo")
+
+SELFDEV_WEEKDAY = int(os.environ.get("MONI_SELFDEV_WEEKDAY", "0"))  # 0 = Montag
+SELFDEV_TIME = os.environ.get("MONI_SELFDEV_TIME", "08:30")
+
 BASE_SYSTEM_PROMPT = f"""Du bist Moni, der persönliche KI-Assistent deines Nutzers.
 
 Persönlichkeit: höflich-direkt mit einer trockenen, dezenten Prise Witz -
@@ -58,7 +67,17 @@ immer (Tools: pin_to_dashboard, unpin_from_dashboard). Wenn danach gefragt
 wird, hol dir bei Bedarf per Websuche aktuelle Infos (z. B. einen Kurs) und
 heft das Ergebnis mit einem klaren Titel an. Bittet der Nutzer erneut um
 dasselbe Thema (z. B. "aktualisier den Apple-Kurs"), überschreibe den
-bestehenden Pin mit demselben Titel, statt einen zweiten anzulegen."""
+bestehenden Pin mit demselben Titel, statt einen zweiten anzulegen.
+
+Du kannst dich außerdem selbst weiterentwickeln (Tool: propose_code_change).
+Wenn der Nutzer eine Code-Änderung oder ein neues Feature an dir selbst
+wünscht, beschreibe dem Tool klar, was gebaut werden soll - es arbeitet auf
+einem neuen Git-Branch und deployt nichts von selbst; der Nutzer schaut sich
+das Ergebnis an und entscheidet über Merge/Deploy. Erkläre das dem Nutzer
+auch so, bevor du das Tool aufrufst. Jeden Montag um {SELFDEV_TIME} Uhr
+prüfst du automatisch selbstständig deinen eigenen Code auf mögliche
+Verbesserungen (rein lesend, ohne Änderungen) - auch das ist ein
+automatischer Vorgang, kein Nutzer-Chat."""
 
 
 def build_system_prompt():

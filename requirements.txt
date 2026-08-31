@@ -4,6 +4,10 @@ anthropic>=0.68.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 
+# Für die Selbst-Weiterentwicklung (moni/self_dev.py) - bundelt eine native
+# Claude-Code-Binary für die meisten Plattformen (x86_64 Linux inklusive):
+claude-agent-sdk>=0.1.0
+
 # Optional, nur für --voice:
 # SpeechRecognition>=3.10
 # pyttsx3>=2.90

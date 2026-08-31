@@ -191,24 +191,57 @@ Das Frontend hebt das passende Panel dann kurz hervor (leicht vergrößert,
 stärkerer Glow, ca. 6 Sekunden) - so wird sichtbar, worüber gerade
 gesprochen wurde, ohne dass Chat-Text geraten werden muss.
 
+## Selbst-Weiterentwicklung
+
+Moni kann sich selbst weiterentwickeln - aber nie unbeaufsichtigt. Zwei Wege:
+
+- **Auf Zuruf**: Bittest du sie im Chat um eine Code-Änderung/ein neues
+  Feature ("Moni, füg X hinzu"), ruft sie über `propose_code_change`
+  (`moni/self_dev.py`) den echten **Claude Agent SDK** auf - eine vollwertige
+  Coding-Agent-Sitzung mit Datei- und Terminal-Zugriff auf ihren eigenen
+  Code. Sie arbeitet dabei **immer auf einem neuen Git-Branch**, committet
+  dort, aber **pusht/merged/deployed nichts von selbst** - das entscheidest
+  du. Wie `run_shell_command`/`write_file` ist das ein bestätigungspflichtiges
+  Tool (Erlauben/Ablehnen-Dialog im Chat).
+- **Proaktiv, wöchentlich**: Jeden Montag um `MONI_SELFDEV_TIME` (Standard
+  `08:30`) schaut sich Moni automatisch ihren eigenen Code an und schlägt bis
+  zu drei Verbesserungen vor - rein lesend, ohne Änderungen. Der Vorschlag
+  erscheint als eigene Karte im Chat-Verlauf. Gefällt dir eine Idee, bittest
+  du sie im Chat, das umzusetzen (dann läuft der obige, bestätigungspflichtige
+  Weg).
+
+**Voraussetzungen:** `docker-compose.yml` bindet das echte Git-Arbeitsverzeichnis
+nach `/repo` (siehe `volumes:`), und das Dockerfile installiert `git`. Nach
+einer Selbst-Änderung liegt der neue Branch direkt im gewohnten Repo-Ordner
+auf dem Droplet (z. B. `/root/moni`) - dort mit `git branch`/`git diff`
+prüfen, mergen und danach ganz normal `docker compose up -d --build`.
+
+**Ressourcen-Hinweis:** Eine Agent-SDK-Sitzung ist eine vollständige
+Coding-Agent-Ausführung - spürbar mehr RAM- und Tokenverbrauch als normaler
+Chat. Auf einem 1-GB-Droplet (wie hier) kann das den Server währenddessen
+sichtbar verlangsamen; Swap federt harte Abstürze ab, ist aber kein Ersatz
+für mehr RAM, falls das zum Problem wird.
+
 ## Architektur
 
 ```
 moni/
   cli.py         - Chat-Loop für die Terminal-Nutzung
   web.py         - FastAPI-App: Login, Session, Chat-API mit Confirm-Flow,
-                   Briefing-Scheduler, Status-Endpoint
+                   Briefing-/Selfdev-Scheduler, Status-Endpoint
   web_static/     - Login- und Chat-Oberfläche (HTML/CSS/JS)
   agent.py       - Claude-API-Aufrufe inkl. Tool-Use-Loop (CLI-Pfad)
   tools.py       - Tool-Definitionen + Ausführung (Shell, Dateien, Websuche,
-                   Portfolio, Nutzer-Gedächtnis)
+                   Portfolio, Nutzer-Gedächtnis, Selbst-Weiterentwicklung)
+  self_dev.py    - Claude-Agent-SDK-Aufrufe (Branch-basierte Code-Änderungen,
+                   rein lesende Verbesserungsvorschläge)
   portfolio.py   - Persistente Portfolio-Positionen (~/.moni/portfolio.json)
   profile.py     - Persistente Fakten über den Nutzer (~/.moni/profile.json)
   memory.py      - Persistenter Gesprächsverlauf
   voice.py       - Optionale Sprachein-/ausgabe (nur CLI)
   config.py      - Modell, Persönlichkeit/Systemprompt, Einstellungen
-Dockerfile        - Container-Image für den Web-Modus
-docker-compose.yml - Compose-Service für's Droplet
+Dockerfile        - Container-Image für den Web-Modus (inkl. git)
+docker-compose.yml - Compose-Service für's Droplet (mountet /repo)
 deploy/           - Reverse-Proxy-Vorlagen (Caddy/nginx)
 ```
 

@@ -14,6 +14,8 @@ from . import config, memory, portfolio, profile, system_stats, tts, weather, wi
 from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
 
 BRIEFING_MARKER = "[AUTO-BRIEFING]"
+SELFDEV_MARKER = "[AUTO-SELFDEV]"
+_MARKER_ROLES = {BRIEFING_MARKER: "briefing", SELFDEV_MARKER: "selfdev"}
 
 STATIC_DIR = Path(__file__).parent / "web_static"
 COOKIE_NAME = "moni_session"
@@ -248,18 +250,19 @@ def history(request: Request):
         return denied
 
     out = []
-    next_is_briefing = False
+    next_role = None
     with _lock:
         for m in _state["messages"]:
             text = _block_text(m["content"])
             if m["role"] == "user":
-                if text.startswith(BRIEFING_MARKER):
-                    next_is_briefing = True
+                marker_role = next((r for marker, r in _MARKER_ROLES.items() if text.startswith(marker)), None)
+                if marker_role:
+                    next_role = marker_role
                 elif text:
                     out.append({"role": "user", "text": text})
             elif m["role"] == "assistant" and text:
-                out.append({"role": "briefing" if next_is_briefing else "moni", "text": text})
-                next_is_briefing = False
+                out.append({"role": next_role or "moni", "text": text})
+                next_role = None
     return JSONResponse(out)
 
 
@@ -312,9 +315,44 @@ def _briefing_scheduler():
             pass  # never let a bad run kill the scheduler thread
 
 
+def _generate_self_dev_suggestion():
+    from . import self_dev  # local import: heavier optional dependency
+
+    text = self_dev.suggest_improvements()
+    with _lock:
+        _state["messages"].append({"role": "user", "content": SELFDEV_MARKER})
+        _state["messages"].append({"role": "assistant", "content": text})
+        memory.save_history(_state["messages"])
+
+
+def _next_selfdev_datetime():
+    tz = ZoneInfo(config.BRIEFING_TIMEZONE)
+    now = datetime.datetime.now(tz)
+    hour, minute = (int(x) for x in config.SELFDEV_TIME.split(":"))
+    days_ahead = (config.SELFDEV_WEEKDAY - now.weekday()) % 7
+    target = (now + datetime.timedelta(days=days_ahead)).replace(
+        hour=hour, minute=minute, second=0, microsecond=0
+    )
+    if target <= now:
+        target += datetime.timedelta(days=7)
+    return target
+
+
+def _selfdev_scheduler():
+    while True:
+        tz = ZoneInfo(config.BRIEFING_TIMEZONE)
+        target = _next_selfdev_datetime()
+        time.sleep((target - datetime.datetime.now(tz)).total_seconds())
+        try:
+            _generate_self_dev_suggestion()
+        except Exception:
+            pass  # never let a bad run kill the scheduler thread
+
+
 @app.on_event("startup")
 def _start_scheduler():
     threading.Thread(target=_briefing_scheduler, daemon=True).start()
+    threading.Thread(target=_selfdev_scheduler, daemon=True).start()
 
 
 _weather_cache = {"city": None, "data": None, "ts": 0}

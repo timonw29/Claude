@@ -219,6 +219,17 @@
   .briefing .tag::before { content: '\2600'; }
   .briefing .body { font-size: 15.5px; line-height: 1.45; white-space: pre-wrap; }
 
+  .selfdev {
+    align-self: stretch; background: linear-gradient(135deg, rgba(124,92,255,0.14), rgba(15,20,35,0.6));
+    border: 1px solid rgba(124,92,255,0.4); border-radius: 16px; padding: 14px 16px; max-width: 100%;
+  }
+  .selfdev .tag {
+    display: flex; align-items: center; gap: 8px; font-family: 'Orbitron', sans-serif;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--violet); margin-bottom: 8px;
+  }
+  .selfdev .tag::before { content: '\2699'; }
+  .selfdev .body { font-size: 15.5px; line-height: 1.45; white-space: pre-wrap; }
+
   .confirm-box {
     align-self: flex-start; background: var(--panel-solid); border: 1px solid rgba(124,92,255,0.4);
     border-radius: 16px; padding: 14px 16px; max-width: 92%;
@@ -410,6 +421,21 @@ function addBriefing(text) {
   scrollDown();
 }
 
+function addSelfDevSuggestion(text) {
+  const box = document.createElement('div');
+  box.className = 'selfdev';
+  const tag = document.createElement('div');
+  tag.className = 'tag';
+  tag.textContent = 'Verbesserungsvorschlag';
+  const body = document.createElement('div');
+  body.className = 'body';
+  body.textContent = text;
+  box.appendChild(tag);
+  box.appendChild(body);
+  log.appendChild(box);
+  scrollDown();
+}
+
 function addSystem(text) {
   const div = document.createElement('div');
   div.className = 'system';
@@ -427,19 +453,30 @@ function addThinking() {
   return div;
 }
 
+const CONFIRM_LABELS = {
+  run_shell_command: 'Moni möchte einen Befehl ausführen:',
+  write_file: 'Moni möchte eine Datei schreiben:',
+  propose_code_change: 'Moni möchte sich selbst weiterentwickeln (neuer Git-Branch, kein Deploy):',
+};
+
+function confirmDetail(tool, input) {
+  if (tool === 'run_shell_command') return input.command || '';
+  if (tool === 'write_file') return input.path || '';
+  if (tool === 'propose_code_change') return input.description || '';
+  return JSON.stringify(input);
+}
+
 function addConfirm(tool, input) {
   const box = document.createElement('div');
   box.className = 'confirm-box';
 
   const label = document.createElement('div');
   label.className = 'label';
-  label.textContent = tool === 'run_shell_command'
-    ? 'Moni möchte einen Befehl ausführen:'
-    : 'Moni möchte eine Datei schreiben:';
+  label.textContent = CONFIRM_LABELS[tool] || `Moni möchte "${tool}" ausführen:`;
   box.appendChild(label);
 
   const code = document.createElement('code');
-  code.textContent = tool === 'run_shell_command' ? (input.command || '') : (input.path || '');
+  code.textContent = confirmDetail(tool, input);
   box.appendChild(code);
 
   const buttons = document.createElement('div');
@@ -558,6 +595,7 @@ const TOOL_TO_PANEL = {
   read_file: 'panel-capabilities',
   write_file: 'panel-capabilities',
   list_directory: 'panel-capabilities',
+  propose_code_change: 'panel-capabilities',
 };
 
 function emphasizePanels(toolsUsed) {
@@ -642,6 +680,7 @@ async function loadHistory() {
     }
     for (const item of items) {
       if (item.role === 'briefing') addBriefing(item.text);
+      else if (item.role === 'selfdev') addSelfDevSuggestion(item.text);
       else addBubble(item.role === 'user' ? 'user' : 'moni', item.text);
     }
   } catch (err) {
@@ -685,6 +724,7 @@ const TOOL_LABELS = {
   set_location: 'Standort merken',
   pin_to_dashboard: 'Auf Startseite heften',
   unpin_from_dashboard: 'Pin entfernen',
+  propose_code_change: 'Sich selbst weiterentwickeln',
 };
 
 function gaugeColor(pct) {
