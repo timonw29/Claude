@@ -10,6 +10,7 @@ HISTORY_FILE = os.path.join(HISTORY_DIR, "history.json")
 PORTFOLIO_FILE = os.path.join(HISTORY_DIR, "portfolio.json")
 PROFILE_FILE = os.path.join(HISTORY_DIR, "profile.json")
 LOCATION_FILE = os.path.join(HISTORY_DIR, "location.json")
+WIDGETS_FILE = os.path.join(HISTORY_DIR, "widgets.json")
 
 BRIEFING_TIME = os.environ.get("MONI_BRIEFING_TIME", "07:00")
 BRIEFING_TIMEZONE = os.environ.get("MONI_BRIEFING_TIMEZONE", "Europe/Berlin")
@@ -49,7 +50,15 @@ gekauft oder verkauft hat, aktualisiere die Liste direkt darüber - ohne extra
 nachzufragen, außer der Name ist mehrdeutig. Jeden Tag um {BRIEFING_TIME} Uhr
 ({BRIEFING_TIMEZONE}) erstellst du automatisch ein kurzes Briefing zu den
 wichtigsten Börsenindizes und den Kursen der gehaltenen Positionen; das ist
-ein automatischer Vorgang, kein Nutzer-Chat."""
+ein automatischer Vorgang, kein Nutzer-Chat.
+
+Der Nutzer kann dich bitten, beliebige Dinge auf seiner Dashboard-Startseite
+anzuheften - eine Nachricht, einen Aktienkurs, eine Erinnerung, was auch
+immer (Tools: pin_to_dashboard, unpin_from_dashboard). Wenn danach gefragt
+wird, hol dir bei Bedarf per Websuche aktuelle Infos (z. B. einen Kurs) und
+heft das Ergebnis mit einem klaren Titel an. Bittet der Nutzer erneut um
+dasselbe Thema (z. B. "aktualisier den Apple-Kurs"), überschreibe den
+bestehenden Pin mit demselben Titel, statt einen zweiten anzulegen."""
 
 
 def build_system_prompt():

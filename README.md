@@ -164,6 +164,16 @@ Deko-Statistiken:
   Kacheln statt Overlay (`/api/status`).
 - **Kalender** - noch nicht angebunden, ehrlich als "nicht verbunden"
   markiert statt mit Fake-Daten gefüllt; kommt in einer späteren Phase.
+- **Deine Pins** - frei anheftbare Kacheln (Nachricht, Aktienkurs, Erinnerung,
+  was auch immer), die du Moni im Chat aufträgst (Tools `pin_to_dashboard`,
+  `unpin_from_dashboard`, gespeichert in `~/.moni/widgets.json`). Bittest du
+  erneut zum selben Titel (z. B. "aktualisier den Apple-Kurs"), wird der
+  bestehende Pin überschrieben statt verdoppelt. Jede Pin-Kachel hat auch ein
+  "×" zum direkten Entfernen im Dashboard.
+
+Der 3D-Kern in der Mitte des Dashboards ist jetzt deutlich größer und
+dominanter (Halo-Ringe + Partikelfeld um die Drahtgitter-Kugel), näher am
+Vorbild aus dem Referenzbild.
 
 ## Architektur
 

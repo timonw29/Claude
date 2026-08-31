@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 
-from . import portfolio, profile
+from . import portfolio, profile, widgets
 
 TOOLS = [
     {
@@ -148,6 +148,44 @@ TOOLS = [
             "required": ["city"],
         },
     },
+    {
+        "name": "pin_to_dashboard",
+        "description": (
+            "Pin or update a custom widget on the user's dashboard home "
+            "screen - e.g. a message, a stock price snapshot, a reminder, "
+            "or anything else they want visible at a glance. Calling it "
+            "again with the same title updates that widget instead of "
+            "creating a duplicate."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Short widget title, e.g. 'Apple-Kurs' or 'Notiz'.",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The text to show, e.g. 'AAPL: 231,50 $ (+0,8%)'.",
+                },
+            },
+            "required": ["title", "content"],
+        },
+    },
+    {
+        "name": "unpin_from_dashboard",
+        "description": "Remove a previously pinned dashboard widget.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title_substring": {
+                    "type": "string",
+                    "description": "Substring matching the widget title to remove.",
+                }
+            },
+            "required": ["title_substring"],
+        },
+    },
 ]
 
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
@@ -185,6 +223,10 @@ def run_tool(name, tool_input):
             return profile.forget(tool_input["fact_substring"])
         if name == "set_location":
             return profile.set_location(tool_input["city"])
+        if name == "pin_to_dashboard":
+            return widgets.pin(tool_input["title"], tool_input["content"])
+        if name == "unpin_from_dashboard":
+            return widgets.unpin(tool_input["title_substring"])
         return f"Unbekanntes Tool: {name}"
     except Exception as e:
         return f"Fehler: {e}"

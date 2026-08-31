@@ -10,7 +10,7 @@ import anthropic
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-from . import config, memory, portfolio, profile, system_stats, tts, weather
+from . import config, memory, portfolio, profile, system_stats, tts, weather, widgets
 from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
 
 BRIEFING_MARKER = "[AUTO-BRIEFING]"
@@ -349,5 +349,19 @@ def status(request: Request):
             "tools": sorted(t.get("name") or t.get("type") for t in TOOLS),
             "weather": _cached_weather(),
             "system": system_stats.get_system_stats(),
+            "widgets": widgets.list_widgets(),
         }
     )
+
+
+@app.post("/api/unpin")
+async def unpin(request: Request):
+    denied = _require_session(request)
+    if denied:
+        return denied
+    body = await request.json()
+    title = (body.get("title") or "").strip()
+    if not title:
+        return JSONResponse({"error": "empty"}, status_code=400)
+    widgets.unpin(title)
+    return JSONResponse({"ok": True})
