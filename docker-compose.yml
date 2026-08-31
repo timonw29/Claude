@@ -8,8 +8,12 @@ services:
     # (Selbst-Weiterentwicklung, moni/self_dev.py) auf dem echten
     # Arbeitsverzeichnis branchen/committen kann - passe den Host-Pfad
     # links an dein Setup an, falls er nicht ".".
+    # moni_data: persistiert ~/.moni (Portfolio, Gedächtnis, Aufgaben,
+    # Ziele, Google-Token, ...) über "docker compose up -d --build" hinweg -
+    # ohne dieses Volume startet jeder Rebuild mit leerem Zustand.
     volumes:
       - .:/repo
+      - moni_data:/root/.moni
     # Fall B (Reverse-Proxy läuft direkt auf dem Host, nicht containerisiert):
     # bindet nur an localhost des Droplets - dein Host-Caddy/nginx spricht
     # dann mit http://127.0.0.1:8010.
@@ -22,6 +26,9 @@ services:
     # networks:
     #   - proxy-net
     # Der Proxy erreicht Moni dann über den Servicenamen "moni:8010".
+
+volumes:
+  moni_data:
 
 # networks:
 #   proxy-net:

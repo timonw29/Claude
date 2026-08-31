@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 
-from . import goals, portfolio, profile, todos, widgets
+from . import gcalendar, gmail, goals, portfolio, profile, todos, widgets
 
 TOOLS = [
     {
@@ -298,12 +298,92 @@ TOOLS = [
             "required": ["label"],
         },
     },
+    {
+        "name": "list_unread_emails",
+        "description": (
+            "List the user's unread Gmail messages (sender, subject, "
+            "snippet). Requires Google to be connected - if it isn't, say "
+            "so honestly instead of inventing emails."
+        ),
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "send_email",
+        "description": (
+            "Send an email from the user's Gmail account. Requires Google "
+            "to be connected. Use only when the user explicitly asks to "
+            "send an email."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Recipient email address."},
+                "subject": {"type": "string", "description": "Email subject line."},
+                "body": {"type": "string", "description": "Email body text."},
+            },
+            "required": ["to", "subject", "body"],
+        },
+    },
+    {
+        "name": "list_todays_events",
+        "description": (
+            "List the user's Google Calendar events for today. Requires "
+            "Google to be connected - if it isn't, say so honestly instead "
+            "of inventing appointments."
+        ),
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "create_calendar_event",
+        "description": "Create a new event on the user's Google Calendar. Requires Google to be connected.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string", "description": "Event title."},
+                "start_iso": {
+                    "type": "string",
+                    "description": "Start time, ISO 8601 with timezone offset, e.g. 2026-09-01T15:00:00+02:00.",
+                },
+                "end_iso": {
+                    "type": "string",
+                    "description": "End time, ISO 8601 with timezone offset.",
+                },
+                "description": {"type": "string", "description": "Optional event description."},
+            },
+            "required": ["summary", "start_iso", "end_iso"],
+        },
+    },
+    {
+        "name": "delete_calendar_event",
+        "description": (
+            "Delete an upcoming event on the user's Google Calendar, "
+            "matched by a substring of its title. Requires Google to be "
+            "connected."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title_substring": {
+                    "type": "string",
+                    "description": "Substring matching the event title to delete.",
+                }
+            },
+            "required": ["title_substring"],
+        },
+    },
 ]
 
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
 # are expected to gate these behind a confirmation step before calling
 # run_tool; this module only executes.
-CONFIRM_REQUIRED = {"run_shell_command", "write_file", "propose_code_change"}
+CONFIRM_REQUIRED = {
+    "run_shell_command",
+    "write_file",
+    "propose_code_change",
+    "send_email",
+    "create_calendar_event",
+    "delete_calendar_event",
+}
 
 # Tools safe to run unattended (e.g. the scheduled morning briefing) - never
 # any tool from CONFIRM_REQUIRED, so an automated run can never end up
@@ -355,6 +435,21 @@ def run_tool(name, tool_input):
             return goals.update_progress(tool_input["label"], tool_input["current"])
         if name == "remove_goal":
             return goals.remove_goal(tool_input["label"])
+        if name == "list_unread_emails":
+            return gmail.list_unread()
+        if name == "send_email":
+            return gmail.send_email(tool_input["to"], tool_input["subject"], tool_input["body"])
+        if name == "list_todays_events":
+            return gcalendar.list_today_events_text()
+        if name == "create_calendar_event":
+            return gcalendar.create_event(
+                tool_input["summary"],
+                tool_input["start_iso"],
+                tool_input["end_iso"],
+                tool_input.get("description"),
+            )
+        if name == "delete_calendar_event":
+            return gcalendar.delete_event_by_title(tool_input["title_substring"])
         if name == "propose_code_change":
             from . import self_dev  # local import: heavier optional dependency
 

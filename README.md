@@ -47,6 +47,9 @@ Befehle im Chat: `exit` beendet, `reset` löscht den Verlauf.
 - **Aufgaben & Ziele**: eine einfache To-do-Liste und Fortschrittsziele mit
   Ist-/Sollwert, die Moni direkt im Gespräch pflegt (`~/.moni/todos.json`,
   `~/.moni/goals.json`).
+- **Gmail & Google Kalender** (optional, siehe eigener Abschnitt unten):
+  ungelesene E-Mails zusammenfassen, E-Mails senden, den Tagesplan abrufen,
+  Termine anlegen/löschen - nach einer einmaligen Google-Anmeldung.
 - **Voice** (optional): Spracheingabe über das Mikrofon (Google
   Web-Speech-API, kostenlos, braucht Internet) und Sprachausgabe offline über
   `pyttsx3`. Funktioniert nur lokal auf einem Rechner mit Mikrofon/
@@ -123,6 +126,14 @@ manuell/per Chat ein.
      moni.myjarvis-ai.de` für das TLS-Zertifikat)
 6. Proxy neu laden (`systemctl reload caddy` bzw. `nginx -s reload`) und
    `https://moni.myjarvis-ai.de` im Browser öffnen.
+
+**Wichtig, falls du eine eigene, vom Repo abweichende Compose-Datei pflegst**
+(z. B. `/root/n8n/docker-compose.yml` statt der hier mitgelieferten): Das
+`moni_data:/root/.moni`-Volume muss dort manuell ergänzt werden (siehe
+`docker-compose.yml` in diesem Repo). Ohne dieses Volume gehen Portfolio,
+Gedächtnis, Aufgaben, Ziele, Pins und der Google-Token bei jedem
+`docker compose up -d --build` verloren, weil `~/.moni` sonst nur im
+Container-Dateisystem liegt.
 
 ## Persönlichkeit & Gedächtnis
 
@@ -211,6 +222,54 @@ Die frei anheftbaren Pins (`pin_to_dashboard`/`unpin_from_dashboard`,
 `~/.moni/widgets.json`) sind Teil dieses neuen Kachel-Sets nicht mehr -
 das Tool und die Daten bleiben aber vollständig erhalten, falls du sie dir
 später wieder als eigene Kachel wünschst.
+
+## Google-Integration (Gmail & Kalender)
+
+Moni kann optional dein Gmail-Postfach lesen/senden und deinen Google-Kalender
+lesen/beschreiben. Ohne Verbindung sagt sie das ehrlich (die Termine-Kachel
+zeigt "Kalender nicht verbunden" statt erfundener Termine).
+
+**Einmalige Einrichtung in der Google Cloud Console:**
+
+1. Projekt anlegen (oder ein bestehendes wählen) unter
+   https://console.cloud.google.com/.
+2. Unter **APIs & Services → Library**: **Gmail API** und **Google Calendar
+   API** aktivieren.
+3. Unter **APIs & Services → OAuth consent screen**: User-Typ **"External"**,
+   Pflichtfelder ausfüllen (App-Name z. B. "Moni", deine E-Mail als Support-
+   und Entwickler-Kontakt). Der Status kann auf **"Testing"** bleiben - dafür
+   dich selbst unter **Test users** mit deiner Google-Adresse eintragen
+   (sonst verweigert Google die Anmeldung, weil die App nicht verifiziert
+   ist). Scopes hinzufügen: `gmail.readonly`, `gmail.send`,
+   `calendar.events`.
+4. Unter **APIs & Services → Credentials → Create Credentials → OAuth
+   client ID**: Anwendungstyp **"Web application"**. Bei **Authorized
+   redirect URIs** exakt eintragen:
+   `https://moni.myjarvis-ai.de/oauth/google/callback`
+   (Domain an deine echte anpassen, falls abweichend).
+5. Client-ID und Client-Secret kopieren.
+
+**Auf dem Droplet in `.env` ergänzen:**
+
+```bash
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=https://moni.myjarvis-ai.de/oauth/google/callback
+```
+
+Danach neu deployen (`git pull` + `docker compose up -d --build`, siehe
+Deployment-Abschnitt oben) und im Dashboard auf **"Mit Google verbinden"**
+in der Termine-Kachel klicken (oder direkt `/oauth/google/start` aufrufen).
+Nach der Google-Anmeldung/Zustimmung wird der Token in
+`~/.moni/google_token.json` gespeichert und automatisch erneuert - die
+Anmeldung ist einmalig.
+
+**Werkzeuge, sobald verbunden:** `list_unread_emails`, `list_todays_events`
+sind unkritisch und laufen ohne Rückfrage. `send_email`,
+`create_calendar_event` und `delete_calendar_event` sind wie
+`run_shell_command` bestätigungspflichtig (Erlauben/Ablehnen-Dialog im
+Chat), da sie nach außen sichtbare bzw. schwer rückgängig zu machende
+Wirkung haben.
 
 ## Selbst-Weiterentwicklung
 

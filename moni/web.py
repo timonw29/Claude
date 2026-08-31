@@ -10,7 +10,7 @@ import anthropic
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-from . import activity, config, goals, memory, portfolio, profile, system_stats, todos, tts, weather, widgets
+from . import activity, config, gcalendar, goals, google_auth, memory, portfolio, profile, system_stats, todos, tts, weather, widgets
 from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
 
 # Rough context-window budget used only to render a "context used" percentage
@@ -101,6 +101,27 @@ def index(request: Request):
     if not _valid_session(request):
         return RedirectResponse("/login", status_code=302)
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/oauth/google/start")
+def google_oauth_start(request: Request):
+    if not _valid_session(request):
+        return RedirectResponse("/login", status_code=302)
+    return RedirectResponse(google_auth.build_authorize_url())
+
+
+@app.get("/oauth/google/callback")
+def google_oauth_callback(request: Request):
+    if not _valid_session(request):
+        return RedirectResponse("/login", status_code=302)
+    code = request.query_params.get("code")
+    if not code:
+        return RedirectResponse("/?google=error", status_code=302)
+    try:
+        google_auth.exchange_code(code)
+        return RedirectResponse("/?google=connected", status_code=302)
+    except Exception:
+        return RedirectResponse("/?google=error", status_code=302)
 
 
 _last_call = {"latency_ms": None, "input_tokens": None}
@@ -386,6 +407,24 @@ def _cached_weather():
     return data
 
 
+_calendar_cache = {"data": None, "ts": 0}
+_CALENDAR_TTL_SECONDS = 300
+
+
+def _cached_calendar_events():
+    if not google_auth.is_connected():
+        return None
+    now = time.time()
+    if now - _calendar_cache["ts"] < _CALENDAR_TTL_SECONDS:
+        return _calendar_cache["data"]
+    try:
+        events = gcalendar.list_today_events()
+    except Exception:
+        events = _calendar_cache["data"]  # keep last good value on a transient failure
+    _calendar_cache.update({"data": events, "ts": now})
+    return events
+
+
 @app.post("/api/speak")
 async def speak(request: Request):
     denied = _require_session(request)
@@ -432,6 +471,8 @@ def status(request: Request):
             "activity": activity.recent(10),
             "latency_ms": _last_call["latency_ms"],
             "context_pct": context_pct,
+            "google_connected": google_auth.is_connected(),
+            "calendar_events": _cached_calendar_events(),
         }
     )
 

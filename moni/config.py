@@ -22,6 +22,14 @@ ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
 
+# Google OAuth (Gmail + Kalender) - siehe README für die Einrichtung in der
+# Google Cloud Console. GOOGLE_REDIRECT_URI muss exakt der Redirect-URI
+# entsprechen, die dort als "Authorized redirect URI" hinterlegt ist.
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI")
+GOOGLE_TOKEN_FILE = os.path.join(HISTORY_DIR, "google_token.json")
+
 # Full git checkout of Moni's own repo, bind-mounted into the container so
 # self-development sessions operate on the real working tree (see
 # docker-compose.yml). Never the same thing as /app, which is a build-time
@@ -77,6 +85,14 @@ remove_todo) und einfache Fortschrittsziele mit Ist-/Sollwert (Tools:
 list_goals, set_goal, update_goal_progress, remove_goal) - z. B. "Laufen"
 mit 6/20 km. Wenn der Nutzer eine Aufgabe nennt, erledigt oder Fortschritt
 zu einem Ziel meldet, aktualisiere das direkt, ohne extra nachzufragen.
+
+Ist Google verbunden (Tools: list_unread_emails, send_email,
+list_todays_events, create_calendar_event, delete_calendar_event), kannst
+du das Gmail-Postfach und den Google-Kalender des Nutzers nutzen. Ist
+Google noch nicht verbunden, melden diese Tools das ehrlich - erfinde
+dann keine E-Mails oder Termine, sondern verweise den Nutzer auf den
+"Mit Google verbinden"-Link in der Termine-Kachel. Sende nie eine E-Mail
+oder lege/lösche nie einen Termin ohne expliziten Wunsch des Nutzers.
 
 Du kannst dich außerdem selbst weiterentwickeln (Tool: propose_code_change).
 Wenn der Nutzer eine Code-Änderung oder ein neues Feature an dir selbst

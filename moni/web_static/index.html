@@ -360,7 +360,12 @@ const editToggle = document.getElementById('edit-toggle');
 
 function tileTitle(t) {
   const s = lastStatus || {};
-  if (t.id === 'termine') return 'Termine';
+  if (t.id === 'termine') {
+    if (s.google_connected && s.calendar_events && s.calendar_events.length) {
+      return `Heute · ${s.calendar_events.length} Termine`;
+    }
+    return 'Termine';
+  }
   if (t.id === 'wetter') return (s.weather && s.weather.city) || 'Wetter';
   if (t.id === 'ziele') return 'Ziele';
   if (t.id === 'portfolio') return 'Portfolio';
@@ -370,12 +375,58 @@ function tileTitle(t) {
   return t.id;
 }
 
-function renderTermineBody() {
+function renderTermineBody(connected, events) {
   const wrap = document.createElement('div');
-  const note = document.createElement('div');
-  note.className = 'empty-note';
-  note.textContent = 'Kalender nicht verbunden.';
-  wrap.appendChild(note);
+  if (!connected) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Kalender nicht verbunden.';
+    const link = document.createElement('a');
+    link.href = '/oauth/google/start';
+    link.textContent = 'Mit Google verbinden';
+    link.style.cssText = 'color:var(--accent-light); font-size:11px; text-decoration:none;';
+    wrap.appendChild(note);
+    wrap.appendChild(link);
+    return wrap;
+  }
+  if (!events || !events.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Heute keine Termine.';
+    wrap.appendChild(note);
+    return wrap;
+  }
+  const now = new Date();
+  let nextMarked = false;
+  for (const ev of events) {
+    const start = ev.start ? new Date(ev.start) : null;
+    const isNext = !nextMarked && start && start >= now;
+    if (isNext) nextMarked = true;
+    const row = document.createElement('div');
+    row.className = 'agenda-row' + (isNext ? ' next' : '');
+    const bar = document.createElement('div');
+    bar.className = 'agenda-bar';
+    const textWrap = document.createElement('div');
+    const timeEl = document.createElement('div');
+    timeEl.className = 'agenda-time mono';
+    timeEl.textContent = start
+      ? start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      : 'Ganztägig';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'agenda-title';
+    titleEl.textContent = ev.summary;
+    textWrap.appendChild(timeEl);
+    textWrap.appendChild(titleEl);
+    if (ev.location) {
+      const metaEl = document.createElement('div');
+      metaEl.className = 'agenda-meta';
+      metaEl.textContent = ev.location;
+      textWrap.appendChild(metaEl);
+    }
+    row.appendChild(bar);
+    row.appendChild(textWrap);
+    wrap.appendChild(row);
+  }
   return wrap;
 }
 
@@ -511,7 +562,7 @@ function renderGedaechtnisBody(factList) {
 function renderTileBody(t) {
   const s = lastStatus || {};
   switch (t.id) {
-    case 'termine': return renderTermineBody();
+    case 'termine': return renderTermineBody(s.google_connected, s.calendar_events);
     case 'wetter': return renderWetterBody(s.weather);
     case 'ziele': return renderZieleBody(s.goals);
     case 'portfolio': return renderPortfolioBody(s.portfolio_positions);
@@ -627,6 +678,7 @@ const TOOL_TO_TILE = {
   set_location: 'wetter',
   list_todos: 'aufgaben', add_todo: 'aufgaben', complete_todo: 'aufgaben', remove_todo: 'aufgaben',
   list_goals: 'ziele', set_goal: 'ziele', update_goal_progress: 'ziele', remove_goal: 'ziele',
+  list_todays_events: 'termine', create_calendar_event: 'termine', delete_calendar_event: 'termine',
 };
 
 function emphasizeTiles(toolsUsed) {
@@ -738,12 +790,18 @@ const CONFIRM_LABELS = {
   run_shell_command: 'Moni möchte einen Befehl ausführen:',
   write_file: 'Moni möchte eine Datei schreiben:',
   propose_code_change: 'Moni möchte sich selbst weiterentwickeln (neuer Git-Branch, kein Deploy):',
+  send_email: 'Moni möchte eine E-Mail senden:',
+  create_calendar_event: 'Moni möchte einen Kalendertermin anlegen:',
+  delete_calendar_event: 'Moni möchte einen Kalendertermin löschen:',
 };
 
 function confirmDetail(tool, input) {
   if (tool === 'run_shell_command') return input.command || '';
   if (tool === 'write_file') return input.path || '';
   if (tool === 'propose_code_change') return input.description || '';
+  if (tool === 'send_email') return `An: ${input.to}\nBetreff: ${input.subject}\n\n${input.body}`;
+  if (tool === 'create_calendar_event') return `${input.summary}\n${input.start_iso} – ${input.end_iso}`;
+  if (tool === 'delete_calendar_event') return input.title_substring || '';
   return JSON.stringify(input);
 }
 
@@ -936,7 +994,14 @@ async function loadHistory() {
     addSystem('Verlauf konnte nicht geladen werden.');
   }
 }
-loadHistory();
+loadHistory().then(() => {
+  const params = new URLSearchParams(window.location.search);
+  const googleStatus = params.get('google');
+  if (!googleStatus) return;
+  window.history.replaceState({}, '', '/');
+  if (googleStatus === 'connected') addSystem('Google verbunden.');
+  else if (googleStatus === 'error') addSystem('Google-Verbindung fehlgeschlagen - bitte erneut versuchen.');
+});
 </script>
 </body>
 </html>
