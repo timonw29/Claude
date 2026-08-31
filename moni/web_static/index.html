@@ -367,6 +367,23 @@ function setBusy(busy) {
   textEl.disabled = busy;
 }
 
+async function speak(text) {
+  try {
+    const res = await fetch('/api/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const audio = new Audio(URL.createObjectURL(blob));
+    await audio.play();
+  } catch (err) {
+    // Autoplay blocked or ElevenLabs unavailable - the text bubble already
+    // carries the answer, so this fails silently.
+  }
+}
+
 function handleResult(data, thinkingEl) {
   if (thinkingEl) thinkingEl.remove();
   if (data.status === 'confirm') {
@@ -374,6 +391,7 @@ function handleResult(data, thinkingEl) {
   } else if (data.status === 'reply') {
     addBubble('moni', data.text);
     setBusy(false);
+    speak(data.text);
   } else {
     addSystem('[Fehler] ' + (data.text || 'Unbekannter Fehler'));
     setBusy(false);

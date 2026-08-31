@@ -14,6 +14,10 @@ LOCATION_FILE = os.path.join(HISTORY_DIR, "location.json")
 BRIEFING_TIME = os.environ.get("MONI_BRIEFING_TIME", "07:00")
 BRIEFING_TIMEZONE = os.environ.get("MONI_BRIEFING_TIMEZONE", "Europe/Berlin")
 
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+
 BASE_SYSTEM_PROMPT = f"""Du bist Moni, der persönliche KI-Assistent deines Nutzers.
 
 Persönlichkeit: höflich-direkt mit einer trockenen, dezenten Prise Witz -

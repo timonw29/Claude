@@ -131,6 +131,25 @@ Tagesablauf, Vorlieben), merkt Moni es sich selbstständig (Tools
 gespeichert in `~/.moni/profile.json`) und bezieht es in künftige Antworten
 ein - ganz ohne erneutes Nachfragen.
 
+## Sprachausgabe (ElevenLabs)
+
+Im Web-Modus liest Moni jede Chat-Antwort automatisch laut vor (ElevenLabs
+Text-to-Speech, `moni/tts.py`). Das Gehirn bleibt unverändert Claude mit
+allen Tools/Portfolio/Gedächtnis - ElevenLabs vertont nur den fertigen Text,
+es ist kein eigener Agent. Ohne gesetzten `ELEVENLABS_API_KEY` bleibt Moni
+stumm (Text-Bubble wird trotzdem angezeigt, Fehlschlag beim Sprechen ist
+lautlos). Key und Stimme unter [elevenlabs.io](https://elevenlabs.io) holen
+und in `.env` eintragen:
+
+```bash
+ELEVENLABS_API_KEY=dein-key
+ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM   # Standard: "Rachel", änderbar
+```
+
+Hinweis: Mobile Browser blockieren Audio-Autoplay teils ohne aktive
+Nutzerinteraktion - beim ersten Öffnen der Seite kann ein Antippen nötig
+sein, danach spielt es im laufenden Chat automatisch ab.
+
 ## Dashboard
 
 Im Web-Modus gibt es zwei Tabs: **Dashboard** (Kachel-Übersicht im HUD-Stil)

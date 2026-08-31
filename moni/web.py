@@ -7,10 +7,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import anthropic
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-from . import config, memory, portfolio, profile, system_stats, weather
+from . import config, memory, portfolio, profile, system_stats, tts, weather
 from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
 
 BRIEFING_MARKER = "[AUTO-BRIEFING]"
@@ -315,6 +315,23 @@ def _cached_weather():
     data = weather.fetch_weather(city)
     _weather_cache.update({"city": city, "data": data, "ts": now})
     return data
+
+
+@app.post("/api/speak")
+async def speak(request: Request):
+    denied = _require_session(request)
+    if denied:
+        return denied
+
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if not text:
+        return JSONResponse({"error": "empty"}, status_code=400)
+
+    audio = tts.synthesize(text)
+    if audio is None:
+        return JSONResponse({"error": "tts_unavailable"}, status_code=502)
+    return Response(content=audio, media_type="audio/mpeg")
 
 
 @app.get("/api/status")
