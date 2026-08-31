@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
   :root {
     color-scheme: dark;
@@ -82,11 +83,10 @@
   .hero {
     display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 0 22px;
   }
-  .hero-core {
-    width: 96px; height: 96px; border-radius: 50%;
+  #core-canvas {
+    width: 150px; height: 150px; border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, var(--cyan), var(--violet) 75%);
-    box-shadow: 0 0 50px rgba(0,229,255,0.35), 0 0 100px rgba(124,92,255,0.15);
-    animation: breathe 2.4s ease-in-out infinite;
+    filter: drop-shadow(0 0 25px rgba(0,229,255,0.55)) drop-shadow(0 0 50px rgba(124,92,255,0.25));
   }
   .hero .status-line {
     font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; color: var(--cyan);
@@ -94,10 +94,13 @@
   }
   .hero .model-line { font-size: 13px; color: var(--muted); }
 
-  .tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; perspective: 900px; }
   .tile {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px;
-    backdrop-filter: blur(8px);
+    background: linear-gradient(155deg, rgba(255,255,255,0.05), rgba(15,20,35,0.4) 40%), var(--panel);
+    border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px;
+    backdrop-filter: blur(8px); transform-style: preserve-3d; transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+    will-change: transform;
   }
   .tile.wide { grid-column: 1 / -1; }
   .tile .tile-label {
@@ -213,7 +216,7 @@
 
 <div class="view" id="dashboard">
   <div class="hero">
-    <div class="hero-core"></div>
+    <canvas id="core-canvas"></canvas>
     <div class="status-line">System aktiv</div>
     <div class="model-line" id="hero-model">–</div>
   </div>
@@ -546,6 +549,77 @@ async function loadStatus() {
 }
 
 loadStatus();
+
+/* ---- 3D core ---- */
+function initCore() {
+  const canvas = document.getElementById('core-canvas');
+  const size = 150;
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(size, size, false);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.z = 4.4;
+
+  const outer = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1.55, 1),
+    new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true, transparent: true, opacity: 0.85 })
+  );
+  scene.add(outer);
+
+  const inner = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.95, 0),
+    new THREE.MeshBasicMaterial({ color: 0x7c5cff, wireframe: true, transparent: true, opacity: 0.55 })
+  );
+  scene.add(inner);
+
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.42, 24, 24),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })
+  );
+  scene.add(core);
+
+  let frame;
+  function animate() {
+    frame = requestAnimationFrame(animate);
+    outer.rotation.y += 0.0035;
+    outer.rotation.x += 0.0012;
+    inner.rotation.y -= 0.005;
+    inner.rotation.x += 0.0025;
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAnimationFrame(frame);
+    else animate();
+  });
+}
+
+if (window.THREE) {
+  try { initCore(); } catch (err) { /* canvas keeps its CSS gradient fallback */ }
+}
+
+/* ---- Tilt-on-touch for dashboard tiles ---- */
+function addTilt(el) {
+  function handle(x, y) {
+    const rect = el.getBoundingClientRect();
+    const px = (x - rect.left) / rect.width - 0.5;
+    const py = (y - rect.top) / rect.height - 0.5;
+    el.style.transform = `rotateX(${(-py * 6).toFixed(2)}deg) rotateY(${(px * 6).toFixed(2)}deg)`;
+    el.style.boxShadow = '0 18px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)';
+  }
+  function reset() {
+    el.style.transform = '';
+    el.style.boxShadow = '';
+  }
+  el.addEventListener('mousemove', (e) => handle(e.clientX, e.clientY));
+  el.addEventListener('mouseleave', reset);
+  el.addEventListener('touchmove', (e) => { const t = e.touches[0]; handle(t.clientX, t.clientY); }, { passive: true });
+  el.addEventListener('touchend', reset);
+}
+document.querySelectorAll('.tile').forEach(addTilt);
 </script>
 </body>
 </html>
