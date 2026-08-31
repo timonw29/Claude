@@ -10,7 +10,7 @@ import anthropic
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-from . import config, memory
+from . import config, memory, portfolio, profile
 from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
 
 BRIEFING_MARKER = "[AUTO-BRIEFING]"
@@ -101,7 +101,7 @@ def _call_model(tools):
     return _client.messages.create(
         model=config.MODEL,
         max_tokens=config.MAX_TOKENS,
-        system=config.SYSTEM_PROMPT,
+        system=config.build_system_prompt(),
         tools=tools,
         output_config={"effort": config.EFFORT},
         messages=_state["messages"],
@@ -272,14 +272,19 @@ def _generate_briefing():
             _state["pending"] = None
 
 
-def _seconds_until_next_briefing():
+def _next_briefing_datetime():
     tz = ZoneInfo(config.BRIEFING_TIMEZONE)
     now = datetime.datetime.now(tz)
     hour, minute = (int(x) for x in config.BRIEFING_TIME.split(":"))
     target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if target <= now:
         target += datetime.timedelta(days=1)
-    return (target - now).total_seconds()
+    return target
+
+
+def _seconds_until_next_briefing():
+    tz = ZoneInfo(config.BRIEFING_TIMEZONE)
+    return (_next_briefing_datetime() - datetime.datetime.now(tz)).total_seconds()
 
 
 def _briefing_scheduler():
@@ -294,3 +299,20 @@ def _briefing_scheduler():
 @app.on_event("startup")
 def _start_scheduler():
     threading.Thread(target=_briefing_scheduler, daemon=True).start()
+
+
+@app.get("/api/status")
+def status(request: Request):
+    denied = _require_session(request)
+    if denied:
+        return denied
+    return JSONResponse(
+        {
+            "model": config.MODEL,
+            "portfolio_count": len(portfolio._load()),
+            "profile_facts": len(profile._load()),
+            "next_briefing": _next_briefing_datetime().isoformat(),
+            "briefing_time": config.BRIEFING_TIME,
+            "tools": sorted(t.get("name") or t.get("type") for t in TOOLS),
+        }
+    )

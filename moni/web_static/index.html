@@ -133,12 +133,46 @@
     letter-spacing: 0.5px; text-transform: uppercase; font-family: 'Rajdhani', sans-serif;
   }
   #send:disabled { opacity: 0.5; }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 5; background: rgba(2,4,10,0.7); backdrop-filter: blur(4px);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .overlay[hidden] { display: none; }
+  .status-panel {
+    width: min(100%, 480px); max-height: 82vh; overflow-y: auto;
+    background: var(--panel-solid); border: 1px solid var(--border); border-bottom: none;
+    border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 40px rgba(0,229,255,0.08);
+  }
+  .status-panel h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 3px; margin: 0 0 16px;
+    color: var(--cyan); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;
+  }
+  .status-panel h2 .close { color: var(--muted); font-family: 'Rajdhani', sans-serif; cursor: pointer; font-size: 20px; }
+  .status-section { margin-bottom: 18px; }
+  .status-section .label {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+  }
+  .stat-row { display: flex; gap: 10px; }
+  .stat-tile {
+    flex: 1; background: rgba(0,229,255,0.06); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 12px; text-align: center;
+  }
+  .stat-tile .value { font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--cyan); }
+  .stat-tile .caption { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 7px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 13px;
+    background: rgba(124,92,255,0.1); color: var(--text);
+  }
 </style>
 </head>
 <body>
 <header>
   <div class="brand"><div class="core"></div><h1>MONI</h1></div>
   <div class="actions">
+    <a href="#" id="open-status">Tools</a>
     <a href="#" id="reset">Verlauf löschen</a>
     <a href="/logout">Abmelden</a>
   </div>
@@ -148,6 +182,30 @@
   <input id="text" placeholder="Nachricht an Moni…" autocomplete="off" />
   <button id="send" type="submit">Senden</button>
 </form>
+
+<div class="overlay" id="status-overlay" hidden>
+  <div class="status-panel">
+    <h2>Status <span class="close" id="close-status">&times;</span></h2>
+    <div class="status-section">
+      <div class="label">Gedächtnis</div>
+      <div class="stat-row">
+        <div class="stat-tile"><div class="value" id="stat-profile">–</div><div class="caption">Über dich gelernt</div></div>
+        <div class="stat-tile"><div class="value" id="stat-portfolio">–</div><div class="caption">Portfolio-Positionen</div></div>
+      </div>
+    </div>
+    <div class="status-section">
+      <div class="label">Nächstes Briefing</div>
+      <div class="stat-row">
+        <div class="stat-tile"><div class="value" id="stat-briefing">–</div><div class="caption" id="stat-briefing-caption">–</div></div>
+        <div class="stat-tile"><div class="value" id="stat-model" style="font-size:13px;">–</div><div class="caption">Modell</div></div>
+      </div>
+    </div>
+    <div class="status-section">
+      <div class="label">Verfügbare Fähigkeiten</div>
+      <div class="chip-grid" id="tool-chips"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 const log = document.getElementById('log');
@@ -315,6 +373,54 @@ async function loadHistory() {
 }
 
 loadHistory();
+
+const TOOL_LABELS = {
+  run_shell_command: 'Shell-Befehle',
+  read_file: 'Dateien lesen',
+  write_file: 'Dateien schreiben',
+  list_directory: 'Verzeichnisse',
+  web_search: 'Websuche',
+  list_portfolio: 'Portfolio ansehen',
+  add_portfolio_position: 'Portfolio ergänzen',
+  remove_portfolio_position: 'Portfolio bereinigen',
+  remember_about_user: 'Über dich lernen',
+  recall_about_user: 'Erinnerungen abrufen',
+  forget_about_user: 'Erinnerungen löschen',
+};
+
+const statusOverlay = document.getElementById('status-overlay');
+
+async function openStatus() {
+  statusOverlay.hidden = false;
+  try {
+    const res = await fetch('/api/status');
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    const data = await res.json();
+
+    document.getElementById('stat-profile').textContent = data.profile_facts;
+    document.getElementById('stat-portfolio').textContent = data.portfolio_count;
+    document.getElementById('stat-model').textContent = data.model;
+
+    const next = new Date(data.next_briefing);
+    document.getElementById('stat-briefing').textContent = next.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('stat-briefing-caption').textContent = next.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+
+    const chipGrid = document.getElementById('tool-chips');
+    chipGrid.innerHTML = '';
+    for (const name of data.tools) {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = TOOL_LABELS[name] || name;
+      chipGrid.appendChild(chip);
+    }
+  } catch (err) {
+    // leave placeholders on failure
+  }
+}
+
+document.getElementById('open-status').addEventListener('click', (e) => { e.preventDefault(); openStatus(); });
+document.getElementById('close-status').addEventListener('click', () => { statusOverlay.hidden = true; });
+statusOverlay.addEventListener('click', (e) => { if (e.target === statusOverlay) statusOverlay.hidden = true; });
 </script>
 </body>
 </html>

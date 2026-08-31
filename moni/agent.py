@@ -27,7 +27,7 @@ class Agent:
             response = self.client.messages.create(
                 model=config.MODEL,
                 max_tokens=config.MAX_TOKENS,
-                system=config.SYSTEM_PROMPT,
+                system=config.build_system_prompt(),
                 tools=TOOLS,
                 output_config={"effort": config.EFFORT},
                 messages=messages,

@@ -121,18 +121,37 @@ manuell/per Chat ein.
 6. Proxy neu laden (`systemctl reload caddy` bzw. `nginx -s reload`) und
    `https://moni.myjarvis-ai.de` im Browser öffnen.
 
+## Persönlichkeit & Gedächtnis
+
+Moni hat eine feste Persönlichkeit (höflich-direkt, trockener Humor, JARVIS-
+artig) im Systemprompt (`moni/config.py`). Zusätzlich lernt sie den Nutzer
+über die Zeit kennen: Wenn beiläufig etwas Dauerhaftes erwähnt wird (Beruf,
+Tagesablauf, Vorlieben), merkt Moni es sich selbstständig (Tools
+`remember_about_user` / `recall_about_user` / `forget_about_user`,
+gespeichert in `~/.moni/profile.json`) und bezieht es in künftige Antworten
+ein - ganz ohne erneutes Nachfragen.
+
+Im Web-Modus zeigt der "Tools"-Link oben rechts ein Status-Panel: Modell,
+Anzahl gelernter Fakten, Portfolio-Größe, nächstes Briefing und die Liste
+der aktuell verfügbaren Fähigkeiten (`/api/status`) - alles echte, live
+abgefragte Werte, keine Platzhalter-Anzeigen.
+
 ## Architektur
 
 ```
 moni/
   cli.py         - Chat-Loop für die Terminal-Nutzung
-  web.py         - FastAPI-App: Login, Session, Chat-API mit Confirm-Flow
+  web.py         - FastAPI-App: Login, Session, Chat-API mit Confirm-Flow,
+                   Briefing-Scheduler, Status-Endpoint
   web_static/     - Login- und Chat-Oberfläche (HTML/CSS/JS)
   agent.py       - Claude-API-Aufrufe inkl. Tool-Use-Loop (CLI-Pfad)
-  tools.py       - Tool-Definitionen + Ausführung (Shell, Dateien, Websuche)
+  tools.py       - Tool-Definitionen + Ausführung (Shell, Dateien, Websuche,
+                   Portfolio, Nutzer-Gedächtnis)
+  portfolio.py   - Persistente Portfolio-Positionen (~/.moni/portfolio.json)
+  profile.py     - Persistente Fakten über den Nutzer (~/.moni/profile.json)
   memory.py      - Persistenter Gesprächsverlauf
   voice.py       - Optionale Sprachein-/ausgabe (nur CLI)
-  config.py      - Modell, Systemprompt, Einstellungen
+  config.py      - Modell, Persönlichkeit/Systemprompt, Einstellungen
 Dockerfile        - Container-Image für den Web-Modus
 docker-compose.yml - Compose-Service für's Droplet
 deploy/           - Reverse-Proxy-Vorlagen (Caddy/nginx)

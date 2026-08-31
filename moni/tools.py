@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 
-from . import portfolio
+from . import portfolio, profile
 
 TOOLS = [
     {
@@ -98,6 +98,44 @@ TOOLS = [
             "required": ["name"],
         },
     },
+    {
+        "name": "remember_about_user",
+        "description": (
+            "Save a durable fact learned about the user (habits, work, "
+            "preferences, personality) so future conversations can use it "
+            "without asking again."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "description": "Short category, e.g. 'Beruf', 'Gewohnheiten', 'Vorlieben'.",
+                },
+                "fact": {"type": "string", "description": "The fact itself, one sentence."},
+            },
+            "required": ["category", "fact"],
+        },
+    },
+    {
+        "name": "recall_about_user",
+        "description": "List everything currently remembered about the user.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "forget_about_user",
+        "description": "Remove a previously remembered fact about the user that is outdated or wrong.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "fact_substring": {
+                    "type": "string",
+                    "description": "A substring matching the fact(s) to remove.",
+                }
+            },
+            "required": ["fact_substring"],
+        },
+    },
 ]
 
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
@@ -127,6 +165,12 @@ def run_tool(name, tool_input):
             return portfolio.add_position(tool_input["name"])
         if name == "remove_portfolio_position":
             return portfolio.remove_position(tool_input["name"])
+        if name == "remember_about_user":
+            return profile.remember(tool_input["category"], tool_input["fact"])
+        if name == "recall_about_user":
+            return profile.list_facts()
+        if name == "forget_about_user":
+            return profile.forget(tool_input["fact_substring"])
         return f"Unbekanntes Tool: {name}"
     except Exception as e:
         return f"Fehler: {e}"
