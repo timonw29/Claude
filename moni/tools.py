@@ -2,6 +2,8 @@ import json
 import os
 import subprocess
 
+from . import portfolio
+
 TOOLS = [
     {
         "name": "run_shell_command",
@@ -60,12 +62,53 @@ TOOLS = [
         },
     },
     {"type": "web_search_20260209", "name": "web_search", "max_uses": 3},
+    {
+        "name": "list_portfolio",
+        "description": "List the user's currently tracked stock/ETF portfolio positions.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "add_portfolio_position",
+        "description": (
+            "Add a new position to the user's tracked portfolio, e.g. after "
+            "they mention buying a stock or ETF."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name of the stock/ETF, e.g. 'Nvidia' or 'MSCI World ETF'.",
+                }
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "remove_portfolio_position",
+        "description": (
+            "Remove a position from the user's tracked portfolio, e.g. after "
+            "they mention selling it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Name of the stock/ETF to remove."}
+            },
+            "required": ["name"],
+        },
+    },
 ]
 
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
 # are expected to gate these behind a confirmation step before calling
 # run_tool; this module only executes.
 CONFIRM_REQUIRED = {"run_shell_command", "write_file"}
+
+# Tools safe to run unattended (e.g. the scheduled morning briefing) - never
+# any tool from CONFIRM_REQUIRED, so an automated run can never end up
+# blocked on a confirmation nobody is there to answer.
+SAFE_TOOLS = [t for t in TOOLS if t.get("name") not in CONFIRM_REQUIRED]
 
 
 def run_tool(name, tool_input):
@@ -78,6 +121,12 @@ def run_tool(name, tool_input):
             return _write_file(tool_input["path"], tool_input["content"])
         if name == "list_directory":
             return _list_directory(tool_input.get("path", "."))
+        if name == "list_portfolio":
+            return portfolio.list_positions()
+        if name == "add_portfolio_position":
+            return portfolio.add_position(tool_input["name"])
+        if name == "remove_portfolio_position":
+            return portfolio.remove_position(tool_input["name"])
         return f"Unbekanntes Tool: {name}"
     except Exception as e:
         return f"Fehler: {e}"

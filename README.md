@@ -72,6 +72,29 @@ eigene Domain).
 - Login sperrt sich nach 5 Fehlversuchen für 15 Minuten (einfacher
   Brute-Force-Schutz, `moni/web.py`).
 
+### Portfolio-Tracking & tägliches Briefing
+
+Moni führt eine einfache Liste deiner Aktien-/ETF-Positionen (gespeichert in
+`~/.moni/portfolio.json` im Container). Du pflegst sie per Chat - einfach
+erwähnen, was du gekauft/verkauft hast, z. B. "Ich habe heute 10 Aktien
+Nvidia gekauft" oder "Ich hab meine Coca-Cola-Position verkauft". Moni ruft
+dafür selbstständig `add_portfolio_position` / `remove_portfolio_position`
+auf. Zum Ansehen: einfach fragen, was aktuell im Depot ist.
+
+Jeden Tag um `MONI_BRIEFING_TIME` (Standard `07:00`, Zeitzone
+`MONI_BRIEFING_TIMEZONE`, Standard `Europe/Berlin`) erstellt Moni automatisch
+ein kurzes Briefing zu den wichtigsten Börsenindizes und den Kursen der
+hinterlegten Positionen (per Websuche - keine Börsen-API nötig) und legt es
+in den Gesprächsverlauf, sichtbar beim nächsten Öffnen der Seite. Dieser
+automatische Lauf nutzt bewusst nur ungefährliche Tools (Websuche,
+Portfolio-Liste) - nie Shell-Befehle oder Schreibzugriffe, damit nachts
+nichts auf eine Bestätigung wartet, die niemand gibt.
+
+Eine automatische Trade-Republic-Anbindung gibt es bewusst nicht: Trade
+Republic hat keine offizielle Kunden-API, nur inoffizielle,
+Nutzungsbedingungs-riskante Community-Tools. Für jetzt trägst du Positionen
+manuell/per Chat ein.
+
 ### Deployment auf dem eigenen Server (z. B. DigitalOcean-Droplet mit n8n)
 
 1. Repo auf den Server klonen/pullen (`git clone` bzw. `git pull` in einem

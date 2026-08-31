@@ -1,15 +1,19 @@
+import datetime
 import os
 import secrets
 import threading
 import time
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import anthropic
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 from . import config, memory
-from .tools import TOOLS, CONFIRM_REQUIRED, run_tool
+from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
+
+BRIEFING_MARKER = "[AUTO-BRIEFING]"
 
 STATIC_DIR = Path(__file__).parent / "web_static"
 COOKIE_NAME = "moni_session"
@@ -93,12 +97,12 @@ def index(request: Request):
     return FileResponse(STATIC_DIR / "index.html")
 
 
-def _call_model():
+def _call_model(tools):
     return _client.messages.create(
         model=config.MODEL,
         max_tokens=config.MAX_TOKENS,
         system=config.SYSTEM_PROMPT,
-        tools=TOOLS,
+        tools=tools,
         output_config={"effort": config.EFFORT},
         messages=_state["messages"],
     )
@@ -116,9 +120,9 @@ def _process_blocks(blocks, results):
     return "done", None, None, results
 
 
-def _run_loop():
+def _run_loop(tools=TOOLS):
     while True:
-        response = _call_model()
+        response = _call_model(tools)
         _state["messages"].append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "tool_use":
@@ -208,3 +212,85 @@ def reset(request: Request):
         _state["pending"] = None
         memory.clear_history()
     return JSONResponse({"ok": True})
+
+
+def _block_text(content):
+    if isinstance(content, str):
+        return content
+    parts = []
+    for block in content:
+        block_type = block.type if hasattr(block, "type") else block.get("type")
+        if block_type == "text":
+            parts.append(block.text if hasattr(block, "text") else block["text"])
+    return "".join(parts)
+
+
+@app.get("/api/history")
+def history(request: Request):
+    denied = _require_session(request)
+    if denied:
+        return denied
+
+    out = []
+    next_is_briefing = False
+    with _lock:
+        for m in _state["messages"]:
+            text = _block_text(m["content"])
+            if m["role"] == "user":
+                if text.startswith(BRIEFING_MARKER):
+                    next_is_briefing = True
+                elif text:
+                    out.append({"role": "user", "text": text})
+            elif m["role"] == "assistant" and text:
+                out.append({"role": "briefing" if next_is_briefing else "moni", "text": text})
+                next_is_briefing = False
+    return JSONResponse(out)
+
+
+def _generate_briefing():
+    prompt = (
+        f"{BRIEFING_MARKER} Erstelle mein tägliches Morgen-Briefing. Nutze die "
+        "Websuche für aktuelle Zahlen. Fasse kompakt zusammen (max. ca. 150 "
+        "Wörter):\n"
+        "1. Wichtigste Aktienindizes (DAX, S&P 500, Nasdaq) - aktueller Stand "
+        "und Veränderung zum Vortag.\n"
+        "2. Meine über list_portfolio abrufbaren Positionen - aktuelle Kurse "
+        "und Tagesveränderung.\n"
+        "Kein Smalltalk, keine Rückfragen - direkt die Fakten."
+    )
+    with _lock:
+        checkpoint = len(_state["messages"])
+        _state["messages"].append({"role": "user", "content": prompt})
+        result = _run_loop(tools=SAFE_TOOLS)
+        if result["status"] == "reply":
+            memory.save_history(_state["messages"])
+        else:
+            # A safe-tools-only run should never need confirmation; if it
+            # somehow does, roll back entirely rather than leave a dangling
+            # tool_use in _state that would break the next real /api/chat call.
+            _state["messages"] = _state["messages"][:checkpoint]
+            _state["pending"] = None
+
+
+def _seconds_until_next_briefing():
+    tz = ZoneInfo(config.BRIEFING_TIMEZONE)
+    now = datetime.datetime.now(tz)
+    hour, minute = (int(x) for x in config.BRIEFING_TIME.split(":"))
+    target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if target <= now:
+        target += datetime.timedelta(days=1)
+    return (target - now).total_seconds()
+
+
+def _briefing_scheduler():
+    while True:
+        time.sleep(_seconds_until_next_briefing())
+        try:
+            _generate_briefing()
+        except Exception:
+            pass  # never let a bad run kill the scheduler thread
+
+
+@app.on_event("startup")
+def _start_scheduler():
+    threading.Thread(target=_briefing_scheduler, daemon=True).start()
