@@ -131,9 +131,17 @@ Tagesablauf, Vorlieben), merkt Moni es sich selbstständig (Tools
 gespeichert in `~/.moni/profile.json`) und bezieht es in künftige Antworten
 ein - ganz ohne erneutes Nachfragen.
 
-## Sprachausgabe
+## Sprachein- und -ausgabe
 
-Im Web-Modus liest Moni jede Chat-Antwort automatisch laut vor. Standardmäßig
+**Eingabe:** Das Mikrofon-Symbol neben dem Textfeld startet die
+Spracherkennung des Browsers (`SpeechRecognition`/`webkitSpeechRecognition`,
+Deutsch). Nach dem Sprechen wird die erkannte Nachricht automatisch
+gesendet, kein zusätzliches Antippen von "Senden" nötig. Läuft komplett im
+Browser, kein Account, kein Key. Bei fehlender Unterstützung (z. B. manche
+Browser ohne Web-Speech-API) ist der Button deaktiviert und Tippen
+funktioniert wie gewohnt weiter.
+
+**Ausgabe:** Im Web-Modus liest Moni jede Chat-Antwort automatisch laut vor. Standardmäßig
 über die **kostenlose Sprachausgabe des Browsers** (Web Speech API,
 `speechSynthesis` in `moni/web_static/index.html`) - kein Account, kein API-
 Key, läuft komplett im Browser. Klingt etwas roboterhafter als eine

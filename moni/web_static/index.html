@@ -255,6 +255,21 @@
     background: rgba(15,20,35,0.7); color: var(--text); font-family: inherit;
   }
   #text:focus { outline: none; border-color: var(--cyan); }
+  #mic {
+    width: 46px; height: 46px; flex: 0 0 auto; border-radius: 50%; border: 1px solid var(--border);
+    background: rgba(15,20,35,0.7); color: var(--text); font-size: 19px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+  }
+  #mic.listening {
+    background: linear-gradient(90deg, #ff6b6b, #ff3d81); border-color: transparent;
+    box-shadow: 0 0 0 0 rgba(255,107,107,0.6); animation: mic-pulse 1.4s ease-out infinite;
+  }
+  @keyframes mic-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,107,107,0.5); }
+    70% { box-shadow: 0 0 0 14px rgba(255,107,107,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,107,107,0); }
+  }
+  #mic:disabled { opacity: 0.35; cursor: default; }
   #send {
     padding: 0 20px; border-radius: 22px; border: none;
     background: linear-gradient(90deg, var(--cyan), var(--violet)); color: #05070f; font-weight: 700;
@@ -357,6 +372,7 @@
 <div class="view" id="chat-view" hidden>
   <div id="log"></div>
   <form id="inputbar">
+    <button id="mic" type="button" title="Spracheingabe">🎤</button>
     <input id="text" placeholder="Nachricht an Moni…" autocomplete="off" />
     <button id="send" type="submit">Senden</button>
   </form>
@@ -470,6 +486,49 @@ function speak(text) {
   utter.lang = 'de-DE';
   if (germanVoice) utter.voice = germanVoice;
   window.speechSynthesis.speak(utter);
+}
+
+/* ---- Voice input (speak to Moni instead of typing) ---- */
+const micBtn = document.getElementById('mic');
+const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognitionImpl) {
+  const recognizer = new SpeechRecognitionImpl();
+  recognizer.lang = 'de-DE';
+  recognizer.continuous = false;
+  recognizer.interimResults = false;
+  let recognizing = false;
+
+  recognizer.onstart = () => { recognizing = true; micBtn.classList.add('listening'); };
+  recognizer.onend = () => { recognizing = false; micBtn.classList.remove('listening'); };
+  recognizer.onerror = (e) => {
+    recognizing = false;
+    micBtn.classList.remove('listening');
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      addSystem('Mikrofon-Zugriff nicht erlaubt - bitte in den Safari-Einstellungen aktivieren.');
+    } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      addSystem('Spracheingabe-Fehler: ' + e.error);
+    }
+  };
+  recognizer.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    if (!transcript.trim()) return;
+    textEl.value = transcript;
+    form.requestSubmit();
+  };
+
+  micBtn.addEventListener('click', () => {
+    if (recognizing) {
+      recognizer.stop();
+      return;
+    }
+    if (chatView.hidden) showTab('chat');
+    window.speechSynthesis.cancel(); // don't listen while Moni is still talking
+    try { recognizer.start(); } catch (err) { /* already starting */ }
+  });
+} else {
+  micBtn.disabled = true;
+  micBtn.title = 'Spracheingabe wird von diesem Browser nicht unterstützt';
 }
 
 /* ---- Dashboard panel emphasis when a topic is discussed ---- */
