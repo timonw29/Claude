@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Moni</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; display: flex; flex-direction: column;
+    background: #0f1115; color: #e8e8ea;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  header {
+    padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #22262f; flex: 0 0 auto;
+  }
+  header h1 { font-size: 17px; margin: 0; }
+  header .actions { display: flex; gap: 14px; font-size: 14px; }
+  header a { color: #9098a3; text-decoration: none; }
+  #log {
+    flex: 1 1 auto; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bubble { max-width: 82%; padding: 10px 14px; border-radius: 14px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  .user { align-self: flex-end; background: #5b8cff; color: white; border-bottom-right-radius: 4px; }
+  .moni { align-self: flex-start; background: #1a1d24; border-bottom-left-radius: 4px; }
+  .system { align-self: center; color: #9098a3; font-size: 13px; }
+  .confirm-box { align-self: flex-start; background: #232838; border-radius: 14px; padding: 12px 14px; max-width: 90%; }
+  .confirm-box code { display: block; background: #0f1115; padding: 8px 10px; border-radius: 8px; margin: 8px 0; overflow-x: auto; font-size: 13px; }
+  .confirm-buttons { display: flex; gap: 10px; margin-top: 8px; }
+  .confirm-buttons button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 15px; cursor: pointer; }
+  .btn-allow { background: #3ddc84; color: #08210f; }
+  .btn-deny { background: #ff6b6b; color: #2a0808; }
+  form#inputbar {
+    flex: 0 0 auto; display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid #22262f;
+  }
+  #text {
+    flex: 1; font-size: 16px; padding: 12px 14px; border-radius: 20px; border: 1px solid #2c303a;
+    background: #1a1d24; color: #e8e8ea;
+  }
+  #send { padding: 0 18px; border-radius: 20px; border: none; background: #5b8cff; color: white; font-weight: 600; }
+  #send:disabled { opacity: 0.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Moni</h1>
+  <div class="actions">
+    <a href="#" id="reset">Verlauf löschen</a>
+    <a href="/logout">Abmelden</a>
+  </div>
+</header>
+<div id="log"></div>
+<form id="inputbar">
+  <input id="text" placeholder="Nachricht an Moni…" autocomplete="off" />
+  <button id="send" type="submit">Senden</button>
+</form>
+
+<script>
+const log = document.getElementById('log');
+const form = document.getElementById('inputbar');
+const textEl = document.getElementById('text');
+const sendBtn = document.getElementById('send');
+
+function scrollDown() { log.scrollTop = log.scrollHeight; }
+
+function addBubble(role, text) {
+  const div = document.createElement('div');
+  div.className = 'bubble ' + role;
+  div.textContent = text;
+  log.appendChild(div);
+  scrollDown();
+}
+
+function addSystem(text) {
+  const div = document.createElement('div');
+  div.className = 'system';
+  div.textContent = text;
+  log.appendChild(div);
+  scrollDown();
+}
+
+function addConfirm(tool, input) {
+  const box = document.createElement('div');
+  box.className = 'confirm-box';
+
+  const label = document.createElement('div');
+  label.textContent = tool === 'run_shell_command'
+    ? 'Moni möchte einen Befehl ausführen:'
+    : 'Moni möchte eine Datei schreiben:';
+  box.appendChild(label);
+
+  const code = document.createElement('code');
+  code.textContent = tool === 'run_shell_command' ? (input.command || '') : (input.path || '');
+  box.appendChild(code);
+
+  const buttons = document.createElement('div');
+  buttons.className = 'confirm-buttons';
+
+  const allow = document.createElement('button');
+  allow.className = 'btn-allow';
+  allow.textContent = 'Erlauben';
+  const deny = document.createElement('button');
+  deny.className = 'btn-deny';
+  deny.textContent = 'Ablehnen';
+
+  allow.onclick = () => resolveConfirm(true, box);
+  deny.onclick = () => resolveConfirm(false, box);
+
+  buttons.appendChild(allow);
+  buttons.appendChild(deny);
+  box.appendChild(buttons);
+
+  log.appendChild(box);
+  scrollDown();
+}
+
+function setBusy(busy) {
+  sendBtn.disabled = busy;
+  textEl.disabled = busy;
+}
+
+function handleResult(data) {
+  if (data.status === 'confirm') {
+    addConfirm(data.tool, data.input);
+  } else if (data.status === 'reply') {
+    addBubble('moni', data.text);
+    setBusy(false);
+  } else {
+    addSystem('[Fehler] ' + (data.text || 'Unbekannter Fehler'));
+    setBusy(false);
+  }
+}
+
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}),
+  });
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('unauthenticated');
+  }
+  return res.json();
+}
+
+async function resolveConfirm(approved, box) {
+  box.querySelectorAll('button').forEach(b => b.disabled = true);
+  setBusy(true);
+  const data = await api('/api/confirm', { approved });
+  handleResult(data);
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = textEl.value.trim();
+  if (!text) return;
+  addBubble('user', text);
+  textEl.value = '';
+  setBusy(true);
+  const data = await api('/api/chat', { message: text });
+  handleResult(data);
+});
+
+document.getElementById('reset').addEventListener('click', async (e) => {
+  e.preventDefault();
+  if (!confirm('Gesprächsverlauf wirklich löschen?')) return;
+  await api('/api/reset', {});
+  log.innerHTML = '';
+  addSystem('Verlauf gelöscht.');
+});
+</script>
+</body>
+</html>

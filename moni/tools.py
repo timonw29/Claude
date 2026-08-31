@@ -62,17 +62,14 @@ TOOLS = [
     {"type": "web_search_20260209", "name": "web_search", "max_uses": 3},
 ]
 
-# Tools that touch the filesystem or run commands - gated behind a confirmation
-# prompt unless the user explicitly opted into --yes.
-_CONFIRM_REQUIRED = {"run_shell_command", "write_file"}
+# Tools that touch the filesystem or run commands - callers (CLI, web app)
+# are expected to gate these behind a confirmation step before calling
+# run_tool; this module only executes.
+CONFIRM_REQUIRED = {"run_shell_command", "write_file"}
 
 
-def execute_tool(name, tool_input, auto_confirm=False):
+def run_tool(name, tool_input):
     try:
-        if name in _CONFIRM_REQUIRED and not auto_confirm:
-            if not _confirm(name, tool_input):
-                return "Vom Nutzer abgelehnt."
-
         if name == "run_shell_command":
             return _run_shell_command(tool_input["command"])
         if name == "read_file":
@@ -84,15 +81,6 @@ def execute_tool(name, tool_input, auto_confirm=False):
         return f"Unbekanntes Tool: {name}"
     except Exception as e:
         return f"Fehler: {e}"
-
-
-def _confirm(name, tool_input):
-    if name == "run_shell_command":
-        prompt = f"[Moni möchte ausführen] $ {tool_input.get('command')}"
-    else:
-        prompt = f"[Moni möchte Datei schreiben] {tool_input.get('path')}"
-    answer = input(f"\n{prompt}\nErlauben? [y/N] ").strip().lower()
-    return answer == "y"
 
 
 def _run_shell_command(command):

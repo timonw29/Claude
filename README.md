@@ -49,16 +49,70 @@ Befehle im Chat: `exit` beendet, `reset` löscht den Verlauf.
   `pyttsx3`. Funktioniert nur lokal auf einem Rechner mit Mikrofon/
   Lautsprecher - nicht in einer Remote-/Sandbox-Umgebung.
 
+## Web-Modus (Browser-Chat mit Login)
+
+Für den dauerhaften Zugriff vom Handy/iPad aus gibt es `moni.web`: eine
+passwortgeschützte Weboberfläche, die denselben Agenten-Kern nutzt. Shell-
+Befehle und Schreibzugriffe zeigen dabei "Erlauben/Ablehnen"-Buttons statt
+einer Terminal-Rückfrage.
+
+```bash
+export MONI_WEB_PASSWORD='ein-starkes-passwort'
+export ANTHROPIC_API_KEY='...'
+uvicorn moni.web:app --host 0.0.0.0 --port 8010
+```
+
+Danach im Browser: `http://<server>:8010` (bzw. hinter Reverse-Proxy die
+eigene Domain).
+
+**Wichtig, weil Moni echte Shell-Befehle ausführen kann:**
+- Starkes, einzigartiges Passwort in `MONI_WEB_PASSWORD` setzen.
+- Immer hinter HTTPS betreiben (Reverse-Proxy übernimmt das, siehe unten) -
+  ohne TLS geht das Passwort/Session-Cookie im Klartext übers Netz.
+- Login sperrt sich nach 5 Fehlversuchen für 15 Minuten (einfacher
+  Brute-Force-Schutz, `moni/web.py`).
+
+### Deployment auf dem eigenen Server (z. B. DigitalOcean-Droplet mit n8n)
+
+1. Repo auf den Server klonen/pullen (`git clone` bzw. `git pull` in einem
+   Verzeichnis neben deinem n8n-Setup).
+2. `.env` anlegen und befüllen:
+   ```bash
+   cp .env.example .env
+   # ANTHROPIC_API_KEY und MONI_WEB_PASSWORD eintragen
+   ```
+3. Container bauen und starten:
+   ```bash
+   docker compose up -d --build
+   ```
+   Das startet Moni auf `127.0.0.1:8010` (siehe Kommentare in
+   `docker-compose.yml` für die Variante, bei der dein Reverse-Proxy selbst
+   containerisiert ist und Moni stattdessen über ein gemeinsames
+   Docker-Netzwerk erreicht).
+4. DNS: A-Record `moni.myjarvis-ai.de` auf die IP deines Droplets zeigen
+   lassen (genau wie bei `n8n.myjarvis-ai.de`).
+5. Reverse-Proxy-Eintrag ergänzen - Vorlagen liegen in `deploy/`:
+   - `deploy/Caddyfile.snippet` (falls Caddy)
+   - `deploy/nginx.snippet.conf` (falls nginx - danach `certbot --nginx -d
+     moni.myjarvis-ai.de` für das TLS-Zertifikat)
+6. Proxy neu laden (`systemctl reload caddy` bzw. `nginx -s reload`) und
+   `https://moni.myjarvis-ai.de` im Browser öffnen.
+
 ## Architektur
 
 ```
 moni/
-  cli.py      - Chat-Loop, Argumente
-  agent.py    - Claude-API-Aufrufe inkl. Tool-Use-Loop
-  tools.py    - Tool-Definitionen + Ausführung (Shell, Dateien, Websuche)
-  memory.py   - Persistenter Gesprächsverlauf
-  voice.py    - Optionale Sprachein-/ausgabe
-  config.py   - Modell, Systemprompt, Einstellungen
+  cli.py         - Chat-Loop für die Terminal-Nutzung
+  web.py         - FastAPI-App: Login, Session, Chat-API mit Confirm-Flow
+  web_static/     - Login- und Chat-Oberfläche (HTML/CSS/JS)
+  agent.py       - Claude-API-Aufrufe inkl. Tool-Use-Loop (CLI-Pfad)
+  tools.py       - Tool-Definitionen + Ausführung (Shell, Dateien, Websuche)
+  memory.py      - Persistenter Gesprächsverlauf
+  voice.py       - Optionale Sprachein-/ausgabe (nur CLI)
+  config.py      - Modell, Systemprompt, Einstellungen
+Dockerfile        - Container-Image für den Web-Modus
+docker-compose.yml - Compose-Service für's Droplet
+deploy/           - Reverse-Proxy-Vorlagen (Caddy/nginx)
 ```
 
 ## Nächste Schritte

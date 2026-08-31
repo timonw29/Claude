@@ -1,0 +1,12 @@
+# In deine bestehende Caddyfile einfügen (neben dem Block für n8n.myjarvis-ai.de).
+
+# Fall B: Moni läuft als Container mit "127.0.0.1:8010:8010" gemappt und dein
+# Caddy läuft direkt auf dem Host (nicht containerisiert):
+moni.myjarvis-ai.de {
+    reverse_proxy 127.0.0.1:8010
+}
+
+# Fall A: Caddy läuft selbst als Container im selben Docker-Netzwerk wie Moni:
+# moni.myjarvis-ai.de {
+#     reverse_proxy moni:8010
+# }

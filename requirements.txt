@@ -1,5 +1,9 @@
 anthropic>=0.68.0
 
+# Für den Web-Modus (moni.web):
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
 # Optional, nur für --voice:
 # SpeechRecognition>=3.10
 # pyttsx3>=2.90

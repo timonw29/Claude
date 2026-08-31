@@ -5,6 +5,8 @@ description = "Moni - ein persönlicher CLI-Assistent auf Basis der Claude API"
 requires-python = ">=3.9"
 dependencies = [
     "anthropic>=0.68.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
 ]
 
 [project.optional-dependencies]
@@ -12,6 +14,9 @@ voice = ["SpeechRecognition>=3.10", "pyttsx3>=2.90", "PyAudio>=0.2.14"]
 
 [project.scripts]
 moni = "moni.cli:main"
+
+[tool.setuptools.package-data]
+moni = ["web_static/*.html"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
