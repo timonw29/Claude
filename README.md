@@ -150,30 +150,38 @@ statt `speechSynthesis`.
 
 ## Dashboard
 
-Im Web-Modus gibt es zwei Tabs: **Dashboard** (Kachel-Übersicht im HUD-Stil)
-und **Chat**. Alle Kacheln zeigen echte, live abgefragte Werte - keine
-Deko-Statistiken:
+Im Web-Modus gibt es zwei Tabs: **Dashboard** (3-Spalten-HUD, nah am
+Referenzbild - links Status/Fähigkeiten, Mitte die große 3D-Kugel mit
+"MONI"-Schriftzug und Sockel, rechts Wetter/Kalender/Briefing/Pins; auf
+schmalen Bildschirmen stapeln sich die Spalten, Mitte zuerst) und **Chat**.
+Jedes Panel zeigt echte, live abgefragte Werte - keine Deko-Statistiken:
 
+- **System Status** - echte CPU-Last/RAM/Speicher-Auslastung deines
+  Droplets als Gauges (`moni/system_stats.py`, liest `/proc/meminfo` und
+  `os.getloadavg()`).
+- **Gedächtnis & Portfolio** - Anzahl gelernter Fakten und verfolgter
+  Positionen als Balken.
+- **Fähigkeiten** - die tatsächlich verfügbaren Tools als Chips.
 - **Wetter** - sobald du Moni im Chat sagst, wo du wohnst (Tool
   `set_location`, gespeichert in `~/.moni/location.json`), holt sie sich
   aktuelle Temperatur/Bedingung über die kostenlose, schlüssellose
   Open-Meteo-API (`moni/weather.py`).
-- **Server** - echte CPU-Last/RAM/Speicher-Auslastung deines Droplets
-  (`moni/system_stats.py`, liest `/proc/meminfo` und `os.getloadavg()`).
-- **Gedächtnis / Portfolio / Briefing / Fähigkeiten** - wie zuvor, jetzt als
-  Kacheln statt Overlay (`/api/status`).
-- **Kalender** - noch nicht angebunden, ehrlich als "nicht verbunden"
-  markiert statt mit Fake-Daten gefüllt; kommt in einer späteren Phase.
-- **Deine Pins** - frei anheftbare Kacheln (Nachricht, Aktienkurs, Erinnerung,
-  was auch immer), die du Moni im Chat aufträgst (Tools `pin_to_dashboard`,
-  `unpin_from_dashboard`, gespeichert in `~/.moni/widgets.json`). Bittest du
-  erneut zum selben Titel (z. B. "aktualisier den Apple-Kurs"), wird der
-  bestehende Pin überschrieben statt verdoppelt. Jede Pin-Kachel hat auch ein
-  "×" zum direkten Entfernen im Dashboard.
+- **Kalender** - echtes aktuelles Datum/Uhrzeit plus Wochenstreifen (kein
+  Kalender-Sync, das steht auch klar dabei - keine erfundenen Termine).
+- **Nächstes Briefing** - Uhrzeit/Datum des nächsten automatischen Laufs.
+- **Deine Pins** - frei anheftbare Einträge (Nachricht, Aktienkurs,
+  Erinnerung, was auch immer), die du Moni im Chat aufträgst (Tools
+  `pin_to_dashboard`, `unpin_from_dashboard`, gespeichert in
+  `~/.moni/widgets.json`). Bittest du erneut zum selben Titel (z. B.
+  "aktualisier den Apple-Kurs"), wird der bestehende Pin überschrieben statt
+  verdoppelt. Jeder Pin hat ein "×" zum direkten Entfernen.
 
-Der 3D-Kern in der Mitte des Dashboards ist jetzt deutlich größer und
-dominanter (Halo-Ringe + Partikelfeld um die Drahtgitter-Kugel), näher am
-Vorbild aus dem Referenzbild.
+**Panels reagieren auf das Gespräch:** Wenn eine Chat-Antwort ein Tool
+benutzt (z. B. Portfolio ändern, Standort setzen, etwas anheften), liefert
+`/api/chat`/`/api/confirm` mit `tools_used` zurück, welches Tool das war.
+Das Frontend hebt das passende Panel dann kurz hervor (leicht vergrößert,
+stärkerer Glow, ca. 6 Sekunden) - so wird sichtbar, worüber gerade
+gesprochen wurde, ohne dass Chat-Text geraten werden muss.
 
 ## Architektur
 

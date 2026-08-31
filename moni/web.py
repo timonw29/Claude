@@ -108,11 +108,14 @@ def _call_model(tools):
     )
 
 
-def _process_blocks(blocks, results):
+def _process_blocks(blocks, results, used):
     """Executes tool_use blocks in order, pausing at the first one that
     needs confirmation. Returns ("confirm", block, remaining, results) or
-    ("done", None, None, results)."""
+    ("done", None, None, results). Every block's name is recorded in `used`
+    (mutated in place) as soon as it's seen, confirmed or not - the frontend
+    uses this to highlight the dashboard panel the turn was "about"."""
     for i, block in enumerate(blocks):
+        used.append(block.name)
         if block.name in CONFIRM_REQUIRED:
             return "confirm", block, blocks[i + 1 :], results
         result = run_tool(block.name, block.input)
@@ -120,16 +123,23 @@ def _process_blocks(blocks, results):
     return "done", None, None, results
 
 
-def _run_loop(tools=TOOLS):
+def _run_loop(tools=TOOLS, used=None):
+    if used is None:
+        used = []
     while True:
         response = _call_model(tools)
         _state["messages"].append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "tool_use":
             blocks = [b for b in response.content if b.type == "tool_use"]
-            status, block, remaining, results = _process_blocks(blocks, [])
+            status, block, remaining, results = _process_blocks(blocks, [], used)
             if status == "confirm":
-                _state["pending"] = {"block": block, "remaining": remaining, "results": results}
+                _state["pending"] = {
+                    "block": block,
+                    "remaining": remaining,
+                    "results": results,
+                    "used": used,
+                }
                 return {"status": "confirm", "tool": block.name, "input": block.input}
             _state["messages"].append({"role": "user", "content": results})
             continue
@@ -138,10 +148,10 @@ def _run_loop(tools=TOOLS):
             continue
 
         if response.stop_reason == "refusal":
-            return {"status": "reply", "text": "[Moni hat die Anfrage abgelehnt.]"}
+            return {"status": "reply", "text": "[Moni hat die Anfrage abgelehnt.]", "tools_used": used}
 
         text = "".join(b.text for b in response.content if b.type == "text")
-        return {"status": "reply", "text": text}
+        return {"status": "reply", "text": text, "tools_used": used}
 
 
 @app.post("/api/chat")
@@ -187,16 +197,22 @@ async def confirm(request: Request):
         result_text = run_tool(block.name, block.input) if approved else "Vom Nutzer abgelehnt."
         results = pending["results"]
         results.append({"type": "tool_result", "tool_use_id": block.id, "content": result_text})
+        used = pending.get("used", [])
 
-        status, next_block, remaining, results = _process_blocks(pending["remaining"], results)
+        status, next_block, remaining, results = _process_blocks(pending["remaining"], results, used)
         if status == "confirm":
-            _state["pending"] = {"block": next_block, "remaining": remaining, "results": results}
+            _state["pending"] = {
+                "block": next_block,
+                "remaining": remaining,
+                "results": results,
+                "used": used,
+            }
             return JSONResponse(
                 {"status": "confirm", "tool": next_block.name, "input": next_block.input}
             )
 
         _state["messages"].append({"role": "user", "content": results})
-        result = _run_loop()
+        result = _run_loop(used=used)
         if result["status"] == "reply":
             memory.save_history(_state["messages"])
     return JSONResponse(result)

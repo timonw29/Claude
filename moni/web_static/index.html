@@ -45,7 +45,7 @@
     background: rgba(5,7,16,0.7); backdrop-filter: blur(10px);
   }
   .brand { display: flex; align-items: center; gap: 10px; }
-  .core {
+  .core-dot {
     width: 22px; height: 22px; border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, var(--cyan), var(--violet) 70%);
     box-shadow: 0 0 14px rgba(0,229,255,0.7);
@@ -75,74 +75,117 @@
   .view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
   .view[hidden] { display: none; }
 
-  /* ---- Dashboard ---- */
+  /* ---- Dashboard: 3-column HUD ---- */
   #dashboard {
-    position: relative; z-index: 1; overflow-y: auto; padding: 20px 16px 32px;
+    position: relative; z-index: 1; overflow-y: auto; padding: 18px 14px 32px;
     -webkit-overflow-scrolling: touch;
   }
-  .hero {
-    display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 0 26px;
-    position: relative;
+  .hud-grid {
+    display: grid; grid-template-columns: 1fr; gap: 14px;
   }
-  .hero::before {
-    content: ''; position: absolute; top: 50%; left: 50%; width: 340px; height: 340px;
-    transform: translate(-50%, -55%); border-radius: 50%; z-index: 0; pointer-events: none;
-    background: radial-gradient(circle, rgba(0,229,255,0.12), rgba(124,92,255,0.06) 45%, transparent 72%);
+  @media (min-width: 680px) {
+    .hud-grid { grid-template-columns: 1fr 1.35fr 1fr; align-items: start; }
   }
-  #core-canvas {
-    position: relative; z-index: 1;
-    width: min(78vw, 280px); height: min(78vw, 280px); border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, var(--cyan), var(--violet) 75%);
-    filter: drop-shadow(0 0 35px rgba(0,229,255,0.6)) drop-shadow(0 0 70px rgba(124,92,255,0.3));
+  .hud-col { display: flex; flex-direction: column; gap: 14px; }
+  .hud-col.center { order: -1; }
+  @media (min-width: 680px) {
+    .hud-col.center { order: 0; }
   }
-  .hero .status-line {
-    position: relative; z-index: 1;
-    font-family: 'Orbitron', sans-serif; font-size: 13px; letter-spacing: 4px; color: var(--cyan);
-    text-transform: uppercase;
-  }
-  .hero .model-line { position: relative; z-index: 1; font-size: 13px; color: var(--muted); }
 
-  .tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; perspective: 900px; }
-  .tile {
+  .hud-panel {
     background: linear-gradient(155deg, rgba(255,255,255,0.05), rgba(15,20,35,0.4) 40%), var(--panel);
-    border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px;
-    backdrop-filter: blur(8px); transform-style: preserve-3d; transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid var(--border); border-radius: 14px; padding: 13px 15px;
+    backdrop-filter: blur(8px); transform-style: preserve-3d; transition: transform 0.15s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
     will-change: transform;
   }
-  .tile.wide { grid-column: 1 / -1; }
-  .tile .tile-label {
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
-    display: flex; justify-content: space-between; align-items: center;
+  .hud-panel.emphasize {
+    transform: scale(1.035); border-color: var(--cyan);
+    box-shadow: 0 0 0 1px rgba(0,229,255,0.4), 0 0 40px rgba(0,229,255,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+    z-index: 2;
   }
-  .tile .tile-label .dot { width: 6px; height: 6px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 6px #3ddc84; }
-  .tile .tile-label .dot.off { background: var(--muted); box-shadow: none; }
-  .tile .big-value { font-family: 'Orbitron', sans-serif; font-size: 22px; color: var(--cyan); }
-  .tile .sub-value { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .tile.placeholder { opacity: 0.55; }
-  .tile.placeholder .big-value { font-size: 14px; color: var(--muted); font-family: 'Rajdhani', sans-serif; }
+  .hud-panel-title {
+    font-family: 'Orbitron', sans-serif; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 6px; border-bottom: 1px solid rgba(0,229,255,0.15);
+  }
+  .hud-panel-title .dot { width: 6px; height: 6px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 6px #3ddc84; }
+  .hud-panel-title .dot.off { background: var(--muted); box-shadow: none; }
+  .hud-value { font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--text); }
+  .hud-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 
-  .gauge-row { display: flex; justify-content: space-around; }
-  .gauge { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
-  .gauge span.pct { font-size: 12px; font-weight: 700; }
-  .gauge .gcap { position: absolute; bottom: -18px; font-size: 10.5px; color: var(--muted); white-space: nowrap; left: 50%; transform: translateX(-50%); }
+  .gauge-row { display: flex; justify-content: space-around; padding: 6px 0 20px; }
+  .gauge { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+  .gauge span.pct { font-size: 11px; font-weight: 700; }
+  .gauge .gcap { position: absolute; bottom: -17px; font-size: 10px; color: var(--muted); white-space: nowrap; left: 50%; transform: translateX(-50%); }
 
-  .chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .bar-stat { margin-bottom: 10px; }
+  .bar-stat:last-child { margin-bottom: 0; }
+  .bar-stat .bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .bar-stat .bar-label b { color: var(--text); font-family: 'Orbitron', sans-serif; font-size: 12px; }
+  .bar-track { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width 0.4s ease; }
+
+  .chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
-    padding: 7px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 13px;
+    padding: 6px 10px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px;
     background: rgba(124,92,255,0.1); color: var(--text);
   }
 
+  /* Center hero */
+  .hud-center-inner { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px 0 8px; }
+  .hud-title {
+    font-family: 'Orbitron', sans-serif; font-size: 30px; letter-spacing: 8px; margin: 0;
+    background: linear-gradient(90deg, var(--cyan), var(--violet));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hud-tagline { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+  .globe-wrap { position: relative; margin: 18px 0 6px; }
+  .globe-wrap::before {
+    content: ''; position: absolute; top: 50%; left: 50%; width: 360px; height: 360px;
+    transform: translate(-50%, -55%); border-radius: 50%; z-index: 0; pointer-events: none;
+    background: radial-gradient(circle, rgba(0,229,255,0.14), rgba(124,92,255,0.07) 45%, transparent 72%);
+  }
+  #core-canvas {
+    position: relative; z-index: 1; display: block;
+    width: min(72vw, 300px); height: min(72vw, 300px); border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--cyan), var(--violet) 75%);
+    filter: drop-shadow(0 0 35px rgba(0,229,255,0.6)) drop-shadow(0 0 70px rgba(124,92,255,0.3));
+  }
+  .core-label {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;
+    font-family: 'Orbitron', sans-serif; font-size: 13px; letter-spacing: 3px; color: #05070f;
+    font-weight: 700; pointer-events: none;
+  }
+  .hud-base {
+    width: min(58vw, 240px); height: 26px; border-radius: 50%; margin-top: -10px;
+    background: radial-gradient(ellipse at center, rgba(0,229,255,0.45), rgba(124,92,255,0.15) 60%, transparent 80%);
+    filter: blur(2px);
+  }
+  .hud-status-line {
+    font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; color: var(--cyan);
+    text-transform: uppercase; margin-top: 14px;
+  }
+  .hud-model-line { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
   .section-heading {
     font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-    margin: 22px 2px 10px;
+    margin: 4px 2px 2px;
   }
   .widget-remove {
     background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer;
     line-height: 1; padding: 0 0 0 8px;
   }
   .widget-remove:active { color: #ff6b6b; }
-  .widget-content { font-size: 15px; color: var(--text); margin-top: 2px; white-space: pre-wrap; }
+  .widget-content { font-size: 14.5px; color: var(--text); margin-top: 2px; white-space: pre-wrap; }
+  .widget-panel + .widget-panel { margin-top: 10px; }
+
+  .cal-strip { display: flex; justify-content: space-between; margin-top: 10px; }
+  .cal-day { flex: 1; text-align: center; font-size: 11px; color: var(--muted); }
+  .cal-day .num { display: block; margin-top: 3px; font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--text); }
+  .cal-day.today { color: var(--cyan); }
+  .cal-day.today .num { color: #05070f; background: var(--cyan); border-radius: 50%; width: 20px; height: 20px; line-height: 20px; margin: 3px auto 0; }
 
   /* ---- Chat ---- */
   #log {
@@ -222,7 +265,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><div class="core"></div><h1>MONI</h1></div>
+  <div class="brand"><div class="core-dot"></div><h1>MONI</h1></div>
   <div class="actions">
     <a href="#" id="reset">Verlauf löschen</a>
     <a href="/logout">Abmelden</a>
@@ -234,61 +277,81 @@
 </nav>
 
 <div class="view" id="dashboard">
-  <div class="hero">
-    <canvas id="core-canvas"></canvas>
-    <div class="status-line">System aktiv</div>
-    <div class="model-line" id="hero-model">–</div>
-  </div>
+  <div class="hud-grid">
 
-  <div class="tile-grid">
-    <div class="tile" id="tile-weather">
-      <div class="tile-label"><span>Wetter</span><span class="dot off" id="weather-dot"></span></div>
-      <div class="big-value" id="weather-value">Kein Standort</div>
-      <div class="sub-value" id="weather-sub">Sag Moni im Chat, wo du wohnst</div>
-    </div>
-
-    <div class="tile" id="tile-calendar">
-      <div class="tile-label"><span>Kalender</span><span class="dot off"></span></div>
-      <div class="big-value" style="font-size:14px;color:var(--muted);font-family:'Rajdhani',sans-serif;">Noch nicht verbunden</div>
-      <div class="sub-value">Geplant für später</div>
-    </div>
-
-    <div class="tile wide">
-      <div class="tile-label"><span>Server</span><span class="dot" id="server-dot"></span></div>
-      <div class="gauge-row">
-        <div><div class="gauge" id="gauge-cpu"></div></div>
-        <div><div class="gauge" id="gauge-ram"></div></div>
-        <div><div class="gauge" id="gauge-disk"></div></div>
+    <div class="hud-col left">
+      <div class="hud-panel" id="panel-status">
+        <div class="hud-panel-title"><span>System Status</span><span class="dot" id="server-dot"></span></div>
+        <div class="gauge-row">
+          <div><div class="gauge" id="gauge-cpu"></div></div>
+          <div><div class="gauge" id="gauge-ram"></div></div>
+          <div><div class="gauge" id="gauge-disk"></div></div>
+        </div>
+        <div class="hud-sub" style="text-align:center;">CPU · RAM · Speicher (Droplet)</div>
       </div>
-      <div class="sub-value" style="text-align:center; margin-top:22px;">CPU-Last · RAM · Speicher (Droplet)</div>
+
+      <div class="hud-panel" id="panel-memory">
+        <div class="hud-panel-title"><span>Gedächtnis &amp; Portfolio</span><span class="dot"></span></div>
+        <div class="bar-stat">
+          <div class="bar-label"><span>Über dich gelernt</span><b id="stat-profile">0</b></div>
+          <div class="bar-track"><div class="bar-fill" id="bar-profile" style="width:0%"></div></div>
+        </div>
+        <div class="bar-stat">
+          <div class="bar-label"><span>Portfolio-Positionen</span><b id="stat-portfolio">0</b></div>
+          <div class="bar-track"><div class="bar-fill" id="bar-portfolio" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="hud-panel" id="panel-capabilities">
+        <div class="hud-panel-title"><span>Fähigkeiten</span><span class="dot"></span></div>
+        <div class="chip-grid" id="tool-chips"></div>
+      </div>
     </div>
 
-    <div class="tile">
-      <div class="tile-label"><span>Gedächtnis</span><span class="dot"></span></div>
-      <div class="big-value" id="stat-profile">–</div>
-      <div class="sub-value">Über dich gelernt</div>
+    <div class="hud-col center">
+      <div class="hud-center-inner">
+        <h1 class="hud-title">MONI</h1>
+        <div class="hud-tagline">Persönlicher Assistent</div>
+        <div class="globe-wrap">
+          <canvas id="core-canvas"></canvas>
+          <div class="core-label">MONI</div>
+        </div>
+        <div class="hud-base"></div>
+        <div class="hud-status-line">System aktiv</div>
+        <div class="hud-model-line" id="hero-model">–</div>
+      </div>
     </div>
 
-    <div class="tile">
-      <div class="tile-label"><span>Portfolio</span><span class="dot"></span></div>
-      <div class="big-value" id="stat-portfolio">–</div>
-      <div class="sub-value">Positionen verfolgt</div>
+    <div class="hud-col right">
+      <div class="hud-panel" id="panel-weather">
+        <div class="hud-panel-title"><span>Wetter</span><span class="dot off" id="weather-dot"></span></div>
+        <div class="hud-value" id="weather-value">Kein Standort</div>
+        <div class="hud-sub" id="weather-sub">Sag Moni im Chat, wo du wohnst</div>
+      </div>
+
+      <div class="hud-panel" id="panel-calendar">
+        <div class="hud-panel-title"><span>Kalender</span><span class="dot off"></span></div>
+        <div class="hud-value" id="cal-time" style="font-size:17px;">–</div>
+        <div class="hud-sub" id="cal-date">–</div>
+        <div class="cal-strip" id="cal-strip"></div>
+        <div class="hud-sub" style="margin-top:8px;">Sync noch nicht verbunden</div>
+      </div>
+
+      <div class="hud-panel" id="panel-briefing">
+        <div class="hud-panel-title"><span>Nächstes Briefing</span><span class="dot"></span></div>
+        <div class="hud-value" id="stat-briefing">–</div>
+        <div class="hud-sub" id="stat-briefing-caption">–</div>
+      </div>
+
+      <div class="hud-panel" id="panel-pins">
+        <div class="hud-panel-title"><span>Deine Pins</span><span class="dot"></span></div>
+        <div id="widget-list">
+          <div class="hud-sub" id="pins-empty">Noch nichts angeheftet</div>
+        </div>
+      </div>
     </div>
 
-    <div class="tile wide">
-      <div class="tile-label"><span>Nächstes Briefing</span><span class="dot"></span></div>
-      <div class="big-value" id="stat-briefing">–</div>
-      <div class="sub-value" id="stat-briefing-caption">–</div>
-    </div>
-
-    <div class="tile wide">
-      <div class="tile-label"><span>Fähigkeiten</span><span class="dot"></span></div>
-      <div class="chip-grid" id="tool-chips"></div>
-    </div>
   </div>
-
-  <div class="section-heading" id="pins-heading" hidden>Deine Pins</div>
-  <div class="tile-grid" id="widget-grid"></div>
 </div>
 
 <div class="view" id="chat-view" hidden>
@@ -402,11 +465,40 @@ if ('speechSynthesis' in window) {
 
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel(); // don't overlap with a previous reply
+  window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'de-DE';
   if (germanVoice) utter.voice = germanVoice;
   window.speechSynthesis.speak(utter);
+}
+
+/* ---- Dashboard panel emphasis when a topic is discussed ---- */
+const TOOL_TO_PANEL = {
+  list_portfolio: 'panel-memory',
+  add_portfolio_position: 'panel-memory',
+  remove_portfolio_position: 'panel-memory',
+  remember_about_user: 'panel-memory',
+  recall_about_user: 'panel-memory',
+  forget_about_user: 'panel-memory',
+  set_location: 'panel-weather',
+  pin_to_dashboard: 'panel-pins',
+  unpin_from_dashboard: 'panel-pins',
+  run_shell_command: 'panel-capabilities',
+  read_file: 'panel-capabilities',
+  write_file: 'panel-capabilities',
+  list_directory: 'panel-capabilities',
+};
+
+function emphasizePanels(toolsUsed) {
+  if (!toolsUsed || !toolsUsed.length) return;
+  const ids = new Set(toolsUsed.map(t => TOOL_TO_PANEL[t]).filter(Boolean));
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('emphasize');
+    setTimeout(() => el.classList.remove('emphasize'), 6000);
+  });
+  if (ids.size) loadStatus();
 }
 
 function handleResult(data, thinkingEl) {
@@ -417,6 +509,7 @@ function handleResult(data, thinkingEl) {
     addBubble('moni', data.text);
     setBusy(false);
     speak(data.text);
+    emphasizePanels(data.tools_used);
   } else {
     addSystem('[Fehler] ' + (data.text || 'Unbekannter Fehler'));
     setBusy(false);
@@ -505,7 +598,7 @@ function showTab(tab) {
 tabDashboard.addEventListener('click', () => showTab('dashboard'));
 tabChat.addEventListener('click', () => showTab('chat'));
 
-/* ---- Dashboard ---- */
+/* ---- Dashboard data ---- */
 const TOOL_LABELS = {
   run_shell_command: 'Shell-Befehle',
   read_file: 'Dateien lesen',
@@ -519,6 +612,8 @@ const TOOL_LABELS = {
   recall_about_user: 'Erinnerungen abrufen',
   forget_about_user: 'Erinnerungen löschen',
   set_location: 'Standort merken',
+  pin_to_dashboard: 'Auf Startseite heften',
+  unpin_from_dashboard: 'Pin entfernen',
 };
 
 function gaugeColor(pct) {
@@ -534,7 +629,7 @@ function renderGauge(el, pct, caption) {
   const value = pct === null || pct === undefined ? 0 : pct;
   el.style.background = `conic-gradient(${color} ${value * 3.6}deg, rgba(255,255,255,0.06) 0deg)`;
   const inner = document.createElement('div');
-  inner.style.cssText = 'width:48px;height:48px;border-radius:50%;background:#0d1220;display:flex;align-items:center;justify-content:center;';
+  inner.style.cssText = 'width:42px;height:42px;border-radius:50%;background:#0d1220;display:flex;align-items:center;justify-content:center;';
   const span = document.createElement('span');
   span.className = 'pct';
   span.style.color = color;
@@ -547,6 +642,68 @@ function renderGauge(el, pct, caption) {
   el.appendChild(cap);
 }
 
+function renderWidgets(items) {
+  const list = document.getElementById('widget-list');
+  list.innerHTML = '';
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'hud-sub';
+    empty.id = 'pins-empty';
+    empty.textContent = 'Noch nichts angeheftet';
+    list.appendChild(empty);
+    return;
+  }
+  for (const item of items) {
+    const row = document.createElement('div');
+    row.className = 'widget-panel';
+
+    const label = document.createElement('div');
+    label.className = 'bar-label';
+    const span = document.createElement('span');
+    span.textContent = item.title;
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'widget-remove';
+    removeBtn.textContent = '×';
+    removeBtn.addEventListener('click', async () => {
+      await api('/api/unpin', { title: item.title });
+      loadStatus();
+    });
+    label.appendChild(span);
+    label.appendChild(removeBtn);
+
+    const content = document.createElement('div');
+    content.className = 'widget-content';
+    content.textContent = item.content;
+
+    row.appendChild(label);
+    row.appendChild(content);
+    list.appendChild(row);
+  }
+}
+
+function renderCalendar() {
+  const now = new Date();
+  document.getElementById('cal-time').textContent = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('cal-date').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+  const strip = document.getElementById('cal-strip');
+  strip.innerHTML = '';
+  const dayLabels = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+  const todayIdx = (now.getDay() + 6) % 7; // Monday = 0
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - todayIdx);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const cell = document.createElement('div');
+    cell.className = 'cal-day' + (i === todayIdx ? ' today' : '');
+    cell.innerHTML = `${dayLabels[i]}<span class="num">${d.getDate()}</span>`;
+    strip.appendChild(cell);
+  }
+}
+renderCalendar();
+setInterval(renderCalendar, 60000);
+
 async function loadStatus() {
   try {
     const res = await fetch('/api/status');
@@ -556,6 +713,8 @@ async function loadStatus() {
     document.getElementById('hero-model').textContent = data.model;
     document.getElementById('stat-profile').textContent = data.profile_facts;
     document.getElementById('stat-portfolio').textContent = data.portfolio_count;
+    document.getElementById('bar-profile').style.width = Math.min(100, data.profile_facts * 10) + '%';
+    document.getElementById('bar-portfolio').style.width = Math.min(100, data.portfolio_count * 8) + '%';
 
     const next = new Date(data.next_briefing);
     document.getElementById('stat-briefing').textContent = next.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -575,7 +734,7 @@ async function loadStatus() {
     const cpuPct = sys.load1 !== null && sys.load1 !== undefined ? Math.min(100, sys.load1 * 100) : null;
     renderGauge(document.getElementById('gauge-cpu'), cpuPct, 'CPU');
     renderGauge(document.getElementById('gauge-ram'), sys.mem_used_percent, 'RAM');
-    renderGauge(document.getElementById('gauge-disk'), sys.disk_used_percent, 'Speicher');
+    renderGauge(document.getElementById('gauge-disk'), sys.disk_used_percent, 'Disk');
     document.getElementById('server-dot').classList.toggle('off', cpuPct === null);
 
     const chipGrid = document.getElementById('tool-chips');
@@ -593,47 +752,12 @@ async function loadStatus() {
   }
 }
 
-function renderWidgets(items) {
-  const grid = document.getElementById('widget-grid');
-  const heading = document.getElementById('pins-heading');
-  grid.innerHTML = '';
-  heading.hidden = items.length === 0;
-
-  for (const item of items) {
-    const tile = document.createElement('div');
-    tile.className = 'tile wide';
-
-    const label = document.createElement('div');
-    label.className = 'tile-label';
-    const span = document.createElement('span');
-    span.textContent = item.title;
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'widget-remove';
-    removeBtn.textContent = '×';
-    removeBtn.addEventListener('click', async () => {
-      await api('/api/unpin', { title: item.title });
-      loadStatus();
-    });
-    label.appendChild(span);
-    label.appendChild(removeBtn);
-
-    const content = document.createElement('div');
-    content.className = 'widget-content';
-    content.textContent = item.content;
-
-    tile.appendChild(label);
-    tile.appendChild(content);
-    grid.appendChild(tile);
-    addTilt(tile);
-  }
-}
-
 loadStatus();
 
 /* ---- 3D core ---- */
 function initCore() {
   const canvas = document.getElementById('core-canvas');
-  const size = Math.min(window.innerWidth * 0.78, 280);
+  const size = Math.min(window.innerWidth * 0.72, 300);
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(size, size, false);
@@ -660,7 +784,6 @@ function initCore() {
   );
   scene.add(core);
 
-  // Halo ring, tilted like a hologram equator band.
   const ring = new THREE.Mesh(
     new THREE.TorusGeometry(2.05, 0.012, 8, 96),
     new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.5 })
@@ -676,7 +799,6 @@ function initCore() {
   ring2.rotation.y = Math.PI / 5;
   scene.add(ring2);
 
-  // Sparse particle shell for a "neural network" feel.
   const particleCount = 120;
   const positions = new Float32Array(particleCount * 3);
   for (let i = 0; i < particleCount; i++) {
@@ -719,25 +841,21 @@ if (window.THREE) {
   try { initCore(); } catch (err) { /* canvas keeps its CSS gradient fallback */ }
 }
 
-/* ---- Tilt-on-touch for dashboard tiles ---- */
+/* ---- Tilt-on-touch for dashboard panels ---- */
 function addTilt(el) {
   function handle(x, y) {
     const rect = el.getBoundingClientRect();
     const px = (x - rect.left) / rect.width - 0.5;
     const py = (y - rect.top) / rect.height - 0.5;
     el.style.transform = `rotateX(${(-py * 6).toFixed(2)}deg) rotateY(${(px * 6).toFixed(2)}deg)`;
-    el.style.boxShadow = '0 18px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)';
   }
-  function reset() {
-    el.style.transform = '';
-    el.style.boxShadow = '';
-  }
+  function reset() { el.style.transform = ''; }
   el.addEventListener('mousemove', (e) => handle(e.clientX, e.clientY));
   el.addEventListener('mouseleave', reset);
   el.addEventListener('touchmove', (e) => { const t = e.touches[0]; handle(t.clientX, t.clientY); }, { passive: true });
   el.addEventListener('touchend', reset);
 }
-document.querySelectorAll('.tile').forEach(addTilt);
+document.querySelectorAll('.hud-panel').forEach(addTilt);
 </script>
 </body>
 </html>
