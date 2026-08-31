@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 
-from . import portfolio, profile, widgets
+from . import goals, portfolio, profile, todos, widgets
 
 TOOLS = [
     {
@@ -206,6 +206,98 @@ TOOLS = [
             "required": ["title_substring"],
         },
     },
+    {
+        "name": "list_todos",
+        "description": "List the user's current to-do list (open and done items).",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "add_todo",
+        "description": "Add a new item to the user's to-do list.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "The task text."}
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "complete_todo",
+        "description": "Mark an open to-do item as done, matched by a substring of its text.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "text_substring": {
+                    "type": "string",
+                    "description": "Substring matching the open task to complete.",
+                }
+            },
+            "required": ["text_substring"],
+        },
+    },
+    {
+        "name": "remove_todo",
+        "description": "Delete a to-do item, matched by a substring of its text.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "text_substring": {
+                    "type": "string",
+                    "description": "Substring matching the task(s) to remove.",
+                }
+            },
+            "required": ["text_substring"],
+        },
+    },
+    {
+        "name": "list_goals",
+        "description": "List the user's tracked progress goals (e.g. Laufen, Sparziel) with current/target values.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "set_goal",
+        "description": (
+            "Create or fully redefine a progress goal with a label, current "
+            "value, and target value, e.g. 'Laufen', 6, 20 (km diese Woche)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string", "description": "Short goal label, e.g. 'Laufen'."},
+                "current": {"type": "number", "description": "Current progress value."},
+                "target": {"type": "number", "description": "Target value."},
+            },
+            "required": ["label", "current", "target"],
+        },
+    },
+    {
+        "name": "update_goal_progress",
+        "description": (
+            "Update just the current progress value of an existing goal, "
+            "matched by a substring of its label, e.g. after the user "
+            "mentions new progress ('ich bin heute 6km gelaufen')."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string", "description": "Substring matching the goal label."},
+                "current": {"type": "number", "description": "New current progress value."},
+            },
+            "required": ["label", "current"],
+        },
+    },
+    {
+        "name": "remove_goal",
+        "description": "Delete a tracked progress goal, matched by a substring of its label.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string", "description": "Substring matching the goal(s) to remove."}
+            },
+            "required": ["label"],
+        },
+    },
 ]
 
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
@@ -247,6 +339,22 @@ def run_tool(name, tool_input):
             return widgets.pin(tool_input["title"], tool_input["content"])
         if name == "unpin_from_dashboard":
             return widgets.unpin(tool_input["title_substring"])
+        if name == "list_todos":
+            return todos.list_todos()
+        if name == "add_todo":
+            return todos.add_todo(tool_input["text"])
+        if name == "complete_todo":
+            return todos.complete_todo(tool_input["text_substring"])
+        if name == "remove_todo":
+            return todos.remove_todo(tool_input["text_substring"])
+        if name == "list_goals":
+            return goals.list_goals()
+        if name == "set_goal":
+            return goals.set_goal(tool_input["label"], tool_input["current"], tool_input["target"])
+        if name == "update_goal_progress":
+            return goals.update_progress(tool_input["label"], tool_input["current"])
+        if name == "remove_goal":
+            return goals.remove_goal(tool_input["label"])
         if name == "propose_code_change":
             from . import self_dev  # local import: heavier optional dependency
 

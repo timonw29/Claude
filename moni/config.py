@@ -11,6 +11,9 @@ PORTFOLIO_FILE = os.path.join(HISTORY_DIR, "portfolio.json")
 PROFILE_FILE = os.path.join(HISTORY_DIR, "profile.json")
 LOCATION_FILE = os.path.join(HISTORY_DIR, "location.json")
 WIDGETS_FILE = os.path.join(HISTORY_DIR, "widgets.json")
+TODOS_FILE = os.path.join(HISTORY_DIR, "todos.json")
+GOALS_FILE = os.path.join(HISTORY_DIR, "goals.json")
+ACTIVITY_FILE = os.path.join(HISTORY_DIR, "activity.json")
 
 BRIEFING_TIME = os.environ.get("MONI_BRIEFING_TIME", "07:00")
 BRIEFING_TIMEZONE = os.environ.get("MONI_BRIEFING_TIMEZONE", "Europe/Berlin")
@@ -68,6 +71,12 @@ wird, hol dir bei Bedarf per Websuche aktuelle Infos (z. B. einen Kurs) und
 heft das Ergebnis mit einem klaren Titel an. Bittet der Nutzer erneut um
 dasselbe Thema (z. B. "aktualisier den Apple-Kurs"), überschreibe den
 bestehenden Pin mit demselben Titel, statt einen zweiten anzulegen.
+
+Du führst eine Aufgabenliste (Tools: list_todos, add_todo, complete_todo,
+remove_todo) und einfache Fortschrittsziele mit Ist-/Sollwert (Tools:
+list_goals, set_goal, update_goal_progress, remove_goal) - z. B. "Laufen"
+mit 6/20 km. Wenn der Nutzer eine Aufgabe nennt, erledigt oder Fortschritt
+zu einem Ziel meldet, aktualisiere das direkt, ohne extra nachzufragen.
 
 Du kannst dich außerdem selbst weiterentwickeln (Tool: propose_code_change).
 Wenn der Nutzer eine Code-Änderung oder ein neues Feature an dir selbst

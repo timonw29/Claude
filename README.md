@@ -44,6 +44,9 @@ Befehle im Chat: `exit` beendet, `reset` löscht den Verlauf.
   fragen standardmäßig vor Ausführung nach (außer mit `--yes`).
 - **Gedächtnis**: der Gesprächsverlauf wird in `~/.moni/history.json`
   gespeichert und beim nächsten Start wieder geladen.
+- **Aufgaben & Ziele**: eine einfache To-do-Liste und Fortschrittsziele mit
+  Ist-/Sollwert, die Moni direkt im Gespräch pflegt (`~/.moni/todos.json`,
+  `~/.moni/goals.json`).
 - **Voice** (optional): Spracheingabe über das Mikrofon (Google
   Web-Speech-API, kostenlos, braucht Internet) und Sprachausgabe offline über
   `pyttsx3`. Funktioniert nur lokal auf einem Rechner mit Mikrofon/
@@ -158,38 +161,56 @@ statt `speechSynthesis`.
 
 ## Dashboard
 
-Im Web-Modus gibt es zwei Tabs: **Dashboard** (3-Spalten-HUD, nah am
-Referenzbild - links Status/Fähigkeiten, Mitte die große 3D-Kugel mit
-"MONI"-Schriftzug und Sockel, rechts Wetter/Kalender/Briefing/Pins; auf
-schmalen Bildschirmen stapeln sich die Spalten, Mitte zuerst) und **Chat**.
-Jedes Panel zeigt echte, live abgefragte Werte - keine Deko-Statistiken:
+Der Web-Modus ist eine einzige Ansicht im **Nocturne**-Design (dunkles,
+dichtes Interface): oben eine Topbar, darunter ein Kachelraster mit dem
+rotierbaren 3D-"Kern" in der Mitte, ganz unten ein fest angedockter
+Chat-Bereich - kein separates Dashboard/Chat-Tab-Umschalten mehr.
 
-- **System Status** - echte CPU-Last/RAM/Speicher-Auslastung deines
-  Droplets als Gauges (`moni/system_stats.py`, liest `/proc/meminfo` und
-  `os.getloadavg()`).
-- **Gedächtnis & Portfolio** - Anzahl gelernter Fakten und verfolgter
-  Positionen als Balken.
-- **Fähigkeiten** - die tatsächlich verfügbaren Tools als Chips.
+- **Topbar** - Datum/Uhrzeit, echte CPU-/RAM-Auslastung des Droplets
+  (`moni/system_stats.py`), Online-Status, sowie der Button
+  **"Kacheln anpassen"** für den Edit-Modus.
+- **Kern-Kachel** - die 3D-Präsenz als eigene Web-Component
+  (`moni/web_static/moni-core.js`, `<moni-core>`, three.js), mit der Maus
+  drehbar. Zeigt oben rechts echtes Modell, Kontext-Auslastung (grob
+  geschätzt aus den zuletzt genutzten Input-Tokens) und die Latenz der
+  letzten Anfrage.
+- **Termine** - ehrlich als "Kalender nicht verbunden" markiert; es gibt
+  noch keine echte Kalenderanbindung, deshalb werden hier keine
+  erfundenen Termine gezeigt.
 - **Wetter** - sobald du Moni im Chat sagst, wo du wohnst (Tool
-  `set_location`, gespeichert in `~/.moni/location.json`), holt sie sich
-  aktuelle Temperatur/Bedingung über die kostenlose, schlüssellose
-  Open-Meteo-API (`moni/weather.py`).
-- **Kalender** - echtes aktuelles Datum/Uhrzeit plus Wochenstreifen (kein
-  Kalender-Sync, das steht auch klar dabei - keine erfundenen Termine).
-- **Nächstes Briefing** - Uhrzeit/Datum des nächsten automatischen Laufs.
-- **Deine Pins** - frei anheftbare Einträge (Nachricht, Aktienkurs,
-  Erinnerung, was auch immer), die du Moni im Chat aufträgst (Tools
-  `pin_to_dashboard`, `unpin_from_dashboard`, gespeichert in
-  `~/.moni/widgets.json`). Bittest du erneut zum selben Titel (z. B.
-  "aktualisier den Apple-Kurs"), wird der bestehende Pin überschrieben statt
-  verdoppelt. Jeder Pin hat ein "×" zum direkten Entfernen.
+  `set_location`, `~/.moni/location.json`), holt sie sich aktuelle
+  Temperatur/Bedingung über die kostenlose, schlüssellose Open-Meteo-API
+  (`moni/weather.py`).
+- **Ziele** - einfache Fortschrittsziele mit Ist-/Sollwert (Tools
+  `list_goals`, `set_goal`, `update_goal_progress`, `remove_goal`,
+  `~/.moni/goals.json`), z. B. "Laufen 24/40".
+- **Portfolio** - deine echten, über `add_portfolio_position` getrackten
+  Positionen als Chips (keine erfundenen Kursverläufe/Prozentzahlen, da
+  Moni aktuell keine Kurshistorie speichert).
+- **Aufgaben** - eine echte To-do-Liste (Tools `list_todos`, `add_todo`,
+  `complete_todo`, `remove_todo`, `~/.moni/todos.json`); Klick auf eine
+  Zeile im Dashboard toggelt sie direkt (`POST /api/todo/toggle`).
+- **Live-Aktivität** - ein rollierendes Log der zuletzt tatsächlich
+  ausgeführten Tools (`moni/activity.py`, `~/.moni/activity.json`) mit
+  relativer Zeitangabe ("vor 12 s").
+- **Gedächtnis** - standardmäßig ausgeblendet (Chip in der Edit-Leiste),
+  zeigt Anzahl und letzte Einträge der über dich gelernten Fakten.
 
-**Panels reagieren auf das Gespräch:** Wenn eine Chat-Antwort ein Tool
-benutzt (z. B. Portfolio ändern, Standort setzen, etwas anheften), liefert
-`/api/chat`/`/api/confirm` mit `tools_used` zurück, welches Tool das war.
-Das Frontend hebt das passende Panel dann kurz hervor (leicht vergrößert,
-stärkerer Glow, ca. 6 Sekunden) - so wird sichtbar, worüber gerade
-gesprochen wurde, ohne dass Chat-Text geraten werden muss.
+**Edit-Modus:** Kacheln lassen sich per Drag & Drop neu anordnen, über
+↔/↕ in Breite/Höhe umschalten und über ✕ ausblenden (landen dann als Chip
+in der Edit-Leiste). Das Layout wird bewusst nicht gespeichert - jeder
+Seitenaufruf startet wieder mit der Standardanordnung.
+
+**Kacheln reagieren auf das Gespräch:** Wenn eine Chat-Antwort ein Tool
+benutzt (z. B. Portfolio ändern, ein Ziel aktualisieren, eine Aufgabe
+abhaken), liefert `/api/chat`/`/api/confirm` mit `tools_used` zurück,
+welches Tool das war. Das Frontend hebt die passende Kachel dann kurz
+hervor (Glow in Akzentfarbe, ca. 6 Sekunden).
+
+Die frei anheftbaren Pins (`pin_to_dashboard`/`unpin_from_dashboard`,
+`~/.moni/widgets.json`) sind Teil dieses neuen Kachel-Sets nicht mehr -
+das Tool und die Daten bleiben aber vollständig erhalten, falls du sie dir
+später wieder als eigene Kachel wünschst.
 
 ## Selbst-Weiterentwicklung
 

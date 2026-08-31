@@ -10,8 +10,12 @@ import anthropic
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-from . import config, memory, portfolio, profile, system_stats, tts, weather, widgets
+from . import activity, config, goals, memory, portfolio, profile, system_stats, todos, tts, weather, widgets
 from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
+
+# Rough context-window budget used only to render a "context used" percentage
+# in the dashboard topbar; not an exact accounting of the model's real limit.
+CONTEXT_WINDOW_TOKENS = 200_000
 
 BRIEFING_MARKER = "[AUTO-BRIEFING]"
 SELFDEV_MARKER = "[AUTO-SELFDEV]"
@@ -99,8 +103,12 @@ def index(request: Request):
     return FileResponse(STATIC_DIR / "index.html")
 
 
+_last_call = {"latency_ms": None, "input_tokens": None}
+
+
 def _call_model(tools):
-    return _client.messages.create(
+    start = time.monotonic()
+    response = _client.messages.create(
         model=config.MODEL,
         max_tokens=config.MAX_TOKENS,
         system=config.build_system_prompt(),
@@ -108,6 +116,11 @@ def _call_model(tools):
         output_config={"effort": config.EFFORT},
         messages=_state["messages"],
     )
+    _last_call["latency_ms"] = round((time.monotonic() - start) * 1000)
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        _last_call["input_tokens"] = usage.input_tokens
+    return response
 
 
 def _process_blocks(blocks, results, used):
@@ -121,6 +134,7 @@ def _process_blocks(blocks, results, used):
         if block.name in CONFIRM_REQUIRED:
             return "confirm", block, blocks[i + 1 :], results
         result = run_tool(block.name, block.input)
+        activity.log(f"Tool genutzt: {block.name}")
         results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
     return "done", None, None, results
 
@@ -197,6 +211,7 @@ async def confirm(request: Request):
 
         block = pending["block"]
         result_text = run_tool(block.name, block.input) if approved else "Vom Nutzer abgelehnt."
+        activity.log(f"Tool {'genutzt' if approved else 'abgelehnt'}: {block.name}")
         results = pending["results"]
         results.append({"type": "tool_result", "tool_use_id": block.id, "content": result_text})
         used = pending.get("used", [])
@@ -393,19 +408,52 @@ def status(request: Request):
     denied = _require_session(request)
     if denied:
         return denied
+    input_tokens = _last_call["input_tokens"]
+    context_pct = (
+        round(min(input_tokens, CONTEXT_WINDOW_TOKENS) / CONTEXT_WINDOW_TOKENS * 100)
+        if input_tokens is not None
+        else None
+    )
     return JSONResponse(
         {
             "model": config.MODEL,
             "portfolio_count": len(portfolio._load()),
+            "portfolio_positions": portfolio._load(),
             "profile_facts": len(profile._load()),
+            "profile_fact_list": profile._load()[-5:],
             "next_briefing": _next_briefing_datetime().isoformat(),
             "briefing_time": config.BRIEFING_TIME,
             "tools": sorted(t.get("name") or t.get("type") for t in TOOLS),
             "weather": _cached_weather(),
             "system": system_stats.get_system_stats(),
             "widgets": widgets.list_widgets(),
+            "todos": todos.list_todos(),
+            "goals": goals.list_goals(),
+            "activity": activity.recent(10),
+            "latency_ms": _last_call["latency_ms"],
+            "context_pct": context_pct,
         }
     )
+
+
+@app.post("/api/todo/toggle")
+async def toggle_todo(request: Request):
+    denied = _require_session(request)
+    if denied:
+        return denied
+    body = await request.json()
+    index = body.get("index")
+    if not isinstance(index, int):
+        return JSONResponse({"error": "index fehlt"}, status_code=400)
+    ok = todos.toggle_by_index(index)
+    if not ok:
+        return JSONResponse({"error": "ungültiger index"}, status_code=400)
+    return JSONResponse({"ok": True, "todos": todos.list_todos()})
+
+
+@app.get("/moni-core.js")
+def moni_core_js():
+    return FileResponse(STATIC_DIR / "moni-core.js", media_type="application/javascript")
 
 
 @app.post("/api/unpin")

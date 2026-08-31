@@ -6,441 +6,722 @@
 <title>Moni</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/moni-core.js"></script>
 <style>
   :root {
     color-scheme: dark;
-    --bg: #050710;
-    --panel: rgba(15, 20, 35, 0.6);
-    --panel-solid: #0d1220;
-    --border: rgba(0, 229, 255, 0.2);
-    --cyan: #00e5ff;
-    --violet: #7c5cff;
-    --amber: #ffb347;
-    --text: #e6f1ff;
-    --muted: #7d8aa8;
+    --bg: #12131d;
+    --tile-bg: #1b1d2b;
+    --tile-border: #292b31;
+    --border-strong: #3f424d;
+    --border-dim: #595d6c;
+    --text: #e9e9ed;
+    --text-dim: #9397ab;
+    --text-weak: #75798c;
+    --accent: #9184d9;
+    --accent-light: #b5abfc;
+    --accent-text: #d2cefd;
+    --accent-brightest: #e7e5fe;
+    --accent-deep1: #5d5294;
+    --accent-deep2: #796cbf;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body {
     margin: 0; display: flex; flex-direction: column;
     background: var(--bg); color: var(--text);
-    font-family: 'Rajdhani', -apple-system, sans-serif;
+    font: 400 13px/1.4 'Inter', -apple-system, sans-serif;
     position: relative; overflow: hidden;
   }
-  body::before {
-    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .overlay-grid, .overlay-glow { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .overlay-grid {
     background-image:
-      linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
-    background-size: 42px 42px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 20%, transparent 75%);
+      linear-gradient(rgba(145,132,217,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(145,132,217,.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .overlay-glow {
+    height: 280px;
+    background: radial-gradient(60% 100% at 26% 0%, rgba(145,132,217,.16), transparent 70%);
   }
 
-  header {
-    position: relative; z-index: 1;
-    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
-    border-bottom: 1px solid var(--border); flex: 0 0 auto;
-    background: rgba(5,7,16,0.7); backdrop-filter: blur(10px);
+  /* ---- Topbar ---- */
+  #topbar {
+    position: relative; z-index: 1; height: 60px; padding: 0 26px;
+    display: flex; align-items: center; gap: 22px; flex: 0 0 auto;
   }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .core-dot {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, var(--cyan), var(--violet) 70%);
-    box-shadow: 0 0 14px rgba(0,229,255,0.7);
-    animation: breathe 2.4s ease-in-out infinite;
+  .wordmark { font: 500 17px/1 'Inter'; letter-spacing: -.01em; color: var(--text); }
+  #topbar .datetime { font: 400 11px 'IBM Plex Mono'; color: var(--text-weak); }
+  #topbar .spacer { flex: 1; }
+  #topbar .stats { display: flex; gap: 20px; font: 400 10px 'IBM Plex Mono'; color: var(--text-weak); align-items: center; }
+  #topbar .stats b { color: var(--accent-text); font-weight: 400; }
+  #topbar .online { color: var(--accent-light); }
+  #topbar a.session-link { color: var(--text-weak); text-decoration: none; font: 400 10px 'IBM Plex Mono'; }
+  #topbar a.session-link:active { color: var(--accent-text); }
+  #edit-toggle {
+    font: 500 11px 'Inter'; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--accent);
+    background: transparent; color: var(--accent-text); cursor: pointer;
   }
-  @keyframes breathe { 0%,100% { transform: scale(0.9); opacity: 0.85; } 50% { transform: scale(1.05); opacity: 1; } }
-  header h1 {
-    font-family: 'Orbitron', sans-serif; font-size: 16px; margin: 0; letter-spacing: 3px;
-    background: linear-gradient(90deg, var(--cyan), var(--violet));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  header .actions { display: flex; gap: 16px; font-size: 13px; }
-  header a { color: var(--muted); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; }
-  header a:active { color: var(--cyan); }
+  #edit-toggle:active, #edit-toggle:hover { background: rgba(145,132,217,.16); }
 
-  nav.tabs {
-    position: relative; z-index: 1; flex: 0 0 auto; display: flex; gap: 4px;
-    padding: 8px 14px 0; background: rgba(5,7,16,0.7); backdrop-filter: blur(10px);
+  /* ---- Edit bar ---- */
+  #edit-bar { position: relative; z-index: 1; padding: 0 26px 10px; display: none; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #edit-bar.show { display: flex; }
+  #edit-bar .label { font: 400 10px 'IBM Plex Mono'; color: var(--text-weak); }
+  .chip-hidden {
+    padding: 7px 11px; border-radius: 8px; border: 1px dashed var(--border-dim); background: transparent;
+    color: var(--text-dim); font: 400 11px 'Inter'; cursor: pointer;
   }
-  nav.tabs button {
-    flex: 1; padding: 10px; border: none; background: transparent; color: var(--muted);
-    font-family: 'Rajdhani', sans-serif; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase;
-    font-weight: 600; border-bottom: 2px solid transparent; cursor: pointer;
-  }
-  nav.tabs button.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .chip-hidden:hover { border-color: var(--accent); color: var(--accent-text); }
 
-  .view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-  .view[hidden] { display: none; }
-
-  /* ---- Dashboard: 3-column HUD ---- */
-  #dashboard {
-    position: relative; z-index: 1; overflow-y: auto; padding: 18px 14px 32px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .hud-grid {
-    display: grid; grid-template-columns: 1fr; gap: 14px;
-  }
-  @media (min-width: 680px) {
-    .hud-grid { grid-template-columns: 1fr 1.35fr 1fr; align-items: start; }
-  }
-  .hud-col { display: flex; flex-direction: column; gap: 14px; }
-  .hud-col.center { order: -1; }
-  @media (min-width: 680px) {
-    .hud-col.center { order: 0; }
+  /* ---- Grid ---- */
+  #grid {
+    position: relative; z-index: 1; flex: 1; min-height: 0;
+    display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: 1.5fr 1fr 1fr;
+    grid-auto-flow: dense; gap: 12px; padding: 0 26px 12px; overflow: hidden;
   }
 
-  .hud-panel {
-    background: linear-gradient(155deg, rgba(255,255,255,0.05), rgba(15,20,35,0.4) 40%), var(--panel);
-    border: 1px solid var(--border); border-radius: 14px; padding: 13px 15px;
-    backdrop-filter: blur(8px); transform-style: preserve-3d; transition: transform 0.15s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
-    will-change: transform;
+  /* ---- Kern tile ---- */
+  #kern-tile {
+    grid-column: span 2; grid-row: span 2; border-radius: 10px; overflow: hidden; position: relative;
+    background: linear-gradient(160deg, #20243b, #14151f 72%);
+    box-shadow: 0 0 0 1px var(--border-strong);
   }
-  .hud-panel.emphasize {
-    transform: scale(1.035); border-color: var(--cyan);
-    box-shadow: 0 0 0 1px rgba(0,229,255,0.4), 0 0 40px rgba(0,229,255,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
-    z-index: 2;
-  }
-  .hud-panel-title {
-    font-family: 'Orbitron', sans-serif; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--cyan); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
-    padding-bottom: 6px; border-bottom: 1px solid rgba(0,229,255,0.15);
-  }
-  .hud-panel-title .dot { width: 6px; height: 6px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 6px #3ddc84; }
-  .hud-panel-title .dot.off { background: var(--muted); box-shadow: none; }
-  .hud-value { font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--text); }
-  .hud-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  #kern-tile moni-core { position: absolute; inset: 0; }
+  .kern-overlay { position: absolute; inset: 0; pointer-events: none; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
+  .kern-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .kern-kicker { font: 500 10px 'IBM Plex Mono'; letter-spacing: .12em; text-transform: uppercase; color: #9397ab; }
+  .kern-title { font: 500 34px/1.15 'Inter'; letter-spacing: -.025em; color: var(--text); margin-top: 4px; }
+  .kern-meta { text-align: right; font: 400 10px/1.9 'IBM Plex Mono'; color: var(--text-weak); }
+  .kern-meta .hl { color: var(--accent-light); }
+  .kern-bottom { display: flex; align-items: center; gap: 12px; }
+  .kern-wave { flex: 1; display: flex; gap: 3px; height: 26px; align-items: flex-end; }
+  .kern-wave span { flex: 1; border-radius: 2px; height: 100%; transform-origin: bottom; animation: mwave 1.3s ease-in-out infinite; }
+  @keyframes mwave { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+  .kern-hint { font: 400 10px 'IBM Plex Mono'; color: #9397ab; white-space: nowrap; }
 
-  .gauge-row { display: flex; justify-content: space-around; padding: 6px 0 20px; }
-  .gauge { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
-  .gauge span.pct { font-size: 11px; font-weight: 700; }
-  .gauge .gcap { position: absolute; bottom: -17px; font-size: 10px; color: var(--muted); white-space: nowrap; left: 50%; transform: translateX(-50%); }
+  /* ---- Generic tile ---- */
+  .tile {
+    border-radius: 10px; background: var(--tile-bg); box-shadow: 0 0 0 1px var(--tile-border);
+    padding: 15px; display: flex; flex-direction: column; gap: 9px; overflow: hidden; min-width: 0; min-height: 0;
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .tile.dragging { opacity: .4; }
+  .tile.emphasize { box-shadow: 0 0 0 1px var(--accent-light), 0 0 20px rgba(181,171,252,.35); transform: scale(1.015); z-index: 2; }
+  .tile-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tile-title {
+    font: 500 9px 'IBM Plex Mono'; letter-spacing: .12em; text-transform: uppercase; color: var(--text-weak);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tile-actions { display: flex; gap: 5px; flex: 0 0 auto; }
+  .tile-actions button {
+    padding: 5px 6px; border-radius: 5px; border: 1px solid var(--border-strong); background: transparent;
+    color: #9397ab; font: 400 11px 'Inter'; cursor: pointer; line-height: 1;
+  }
+  .tile-actions button:hover { border-color: var(--accent); color: var(--accent-text); }
+  .tile-actions button.danger:hover { border-color: var(--accent-light); color: var(--accent-brightest); }
+  .tile-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+  .empty-note { font: 400 11.5px 'Inter'; color: var(--text-dim); }
 
-  .bar-stat { margin-bottom: 10px; }
-  .bar-stat:last-child { margin-bottom: 0; }
-  .bar-stat .bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-  .bar-stat .bar-label b { color: var(--text); font-family: 'Orbitron', sans-serif; font-size: 12px; }
-  .bar-track { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width 0.4s ease; }
+  /* Termine */
+  .agenda-row { display: flex; gap: 8px; }
+  .agenda-bar { width: 2px; border-radius: 1px; background: var(--border-strong); flex: 0 0 auto; }
+  .agenda-row.next .agenda-bar { background: var(--accent-light); }
+  .agenda-time { font: 500 12px 'IBM Plex Mono'; color: #9397ab; }
+  .agenda-row.next .agenda-time { color: var(--accent-text); }
+  .agenda-title { font-size: 12.5px; color: var(--text); }
+  .agenda-meta { font-size: 11px; color: var(--text-weak); }
 
-  .chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip {
-    padding: 6px 10px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px;
-    background: rgba(124,92,255,0.1); color: var(--text);
-  }
+  /* Wetter */
+  .weather-temp { font: 500 42px/1 'Inter'; letter-spacing: -.03em; }
+  .weather-cond { font-size: 11px; color: #9397ab; }
 
-  /* Center hero */
-  .hud-center-inner { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px 0 8px; }
-  .hud-title {
-    font-family: 'Orbitron', sans-serif; font-size: 30px; letter-spacing: 8px; margin: 0;
-    background: linear-gradient(90deg, var(--cyan), var(--violet));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .hud-tagline { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+  /* Ziele */
+  .goal-row .goal-label-row { display: flex; justify-content: space-between; font-size: 12px; }
+  .goal-row .goal-value { font: 500 11px 'IBM Plex Mono'; color: var(--accent-text); }
+  .goal-track { height: 5px; border-radius: 3px; background: var(--tile-border); margin-top: 4px; overflow: hidden; }
+  .goal-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent-deep1), var(--accent-light)); }
 
-  .globe-wrap { position: relative; margin: 18px 0 6px; }
-  .globe-wrap::before {
-    content: ''; position: absolute; top: 50%; left: 50%; width: 360px; height: 360px;
-    transform: translate(-50%, -55%); border-radius: 50%; z-index: 0; pointer-events: none;
-    background: radial-gradient(circle, rgba(0,229,255,0.14), rgba(124,92,255,0.07) 45%, transparent 72%);
-  }
-  #core-canvas {
-    position: relative; z-index: 1; display: block;
-    width: min(72vw, 300px); height: min(72vw, 300px); border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, var(--cyan), var(--violet) 75%);
-    filter: drop-shadow(0 0 35px rgba(0,229,255,0.6)) drop-shadow(0 0 70px rgba(124,92,255,0.3));
-  }
-  .core-label {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;
-    font-family: 'Orbitron', sans-serif; font-size: 13px; letter-spacing: 3px; color: #05070f;
-    font-weight: 700; pointer-events: none;
-  }
-  .hud-base {
-    width: min(58vw, 240px); height: 26px; border-radius: 50%; margin-top: -10px;
-    background: radial-gradient(ellipse at center, rgba(0,229,255,0.45), rgba(124,92,255,0.15) 60%, transparent 80%);
-    filter: blur(2px);
-  }
-  .hud-status-line {
-    font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; color: var(--cyan);
-    text-transform: uppercase; margin-top: 14px;
-  }
-  .hud-model-line { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  /* Portfolio */
+  #tile-portfolio .tile-body { flex-direction: row; flex-wrap: wrap; align-content: flex-start; }
+  .portfolio-chip { padding: 5px 9px; border-radius: 7px; background: rgba(145,132,217,.14); border: 1px solid rgba(145,132,217,.35); font-size: 11.5px; color: var(--accent-text); }
 
-  .section-heading {
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-    margin: 4px 2px 2px;
-  }
-  .widget-remove {
-    background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer;
-    line-height: 1; padding: 0 0 0 8px;
-  }
-  .widget-remove:active { color: #ff6b6b; }
-  .widget-content { font-size: 14.5px; color: var(--text); margin-top: 2px; white-space: pre-wrap; }
-  .widget-panel + .widget-panel { margin-top: 10px; }
+  /* Aufgaben */
+  .todo-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .todo-box { width: 11px; height: 11px; border-radius: 3px; border: 1px solid var(--accent); flex: 0 0 auto; }
+  .todo-row.done .todo-box { background: var(--accent); }
+  .todo-text { font-size: 12px; color: var(--text); }
+  .todo-row.done .todo-text { color: var(--text-weak); text-decoration: line-through; }
+  .todo-footer { margin-top: auto; font: 400 10px 'IBM Plex Mono'; color: var(--text-weak); }
 
-  .cal-strip { display: flex; justify-content: space-between; margin-top: 10px; }
-  .cal-day { flex: 1; text-align: center; font-size: 11px; color: var(--muted); }
-  .cal-day .num { display: block; margin-top: 3px; font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--text); }
-  .cal-day.today { color: var(--cyan); }
-  .cal-day.today .num { color: #05070f; background: var(--cyan); border-radius: 50%; width: 20px; height: 20px; line-height: 20px; margin: 3px auto 0; }
+  /* Live-Aktivität */
+  .act-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-dim); }
+  .act-dot { width: 5px; height: 5px; border-radius: 50%; background: #595d6c; flex: 0 0 auto; }
+  .act-row.latest .act-dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .act-time { color: var(--text-weak); }
 
-  /* ---- Chat ---- */
-  #log {
-    position: relative; z-index: 1;
-    flex: 1 1 auto; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .bubble {
-    max-width: 84%; padding: 12px 16px; border-radius: 16px; line-height: 1.45;
-    white-space: pre-wrap; word-break: break-word; font-size: 15.5px;
-  }
-  .user {
-    align-self: flex-end; color: #05070f; font-weight: 500;
-    background: linear-gradient(135deg, var(--cyan), var(--violet));
-    border-bottom-right-radius: 4px;
-  }
-  .moni {
-    align-self: flex-start; background: var(--panel); border: 1px solid var(--border);
-    backdrop-filter: blur(8px); border-bottom-left-radius: 4px;
-  }
-  .system { align-self: center; color: var(--muted); font-size: 12.5px; letter-spacing: 1px; text-transform: uppercase; }
+  /* Gedächtnis */
+  .fact-row { font-size: 12px; color: #9397ab; }
+  .fact-row.latest { color: var(--text); }
 
-  .briefing {
-    align-self: stretch; background: linear-gradient(135deg, rgba(255,179,71,0.12), rgba(15,20,35,0.6));
-    border: 1px solid rgba(255,179,71,0.35); border-radius: 16px; padding: 14px 16px; max-width: 100%;
+  /* ---- Chat dock ---- */
+  #chat-dock {
+    position: relative; z-index: 1; margin: 0 26px 18px; border-radius: 12px;
+    background: rgba(27,29,43,.92); box-shadow: 0 0 0 1px #3f424d; flex: 0 0 auto;
+    display: flex; flex-direction: column;
   }
-  .briefing .tag {
-    display: flex; align-items: center; gap: 8px; font-family: 'Orbitron', sans-serif;
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--amber); margin-bottom: 8px;
+  #chat-log { max-height: 150px; overflow: auto; padding: 14px 16px 4px; display: flex; flex-direction: column; gap: 9px; }
+  .msg-row { display: flex; gap: 8px; align-items: flex-start; }
+  .msg-row.user { justify-content: flex-end; }
+  .avatar {
+    width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; margin-top: 2px;
+    border: 1px solid var(--accent); background: radial-gradient(circle at 35% 30%, var(--accent-light), #2b2741);
   }
-  .briefing .tag::before { content: '\2600'; }
-  .briefing .body { font-size: 15.5px; line-height: 1.45; white-space: pre-wrap; }
-
-  .selfdev {
-    align-self: stretch; background: linear-gradient(135deg, rgba(124,92,255,0.14), rgba(15,20,35,0.6));
-    border: 1px solid rgba(124,92,255,0.4); border-radius: 16px; padding: 14px 16px; max-width: 100%;
+  .msg-text { font-size: 12.5px; line-height: 1.5; color: var(--text); max-width: 820px; white-space: pre-wrap; text-wrap: pretty; }
+  .msg-bubble {
+    color: var(--accent-text); background: rgba(145,132,217,.14); border: 1px solid rgba(145,132,217,.35);
+    border-radius: 9px; padding: 6px 11px; max-width: 620px; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap;
   }
-  .selfdev .tag {
-    display: flex; align-items: center; gap: 8px; font-family: 'Orbitron', sans-serif;
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--violet); margin-bottom: 8px;
+  .msg-system { align-self: center; color: var(--text-weak); font-size: 11px; letter-spacing: .5px; text-transform: uppercase; }
+  .msg-briefing, .msg-selfdev {
+    align-self: stretch; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.5;
+    white-space: pre-wrap; max-width: 100%;
   }
-  .selfdev .tag::before { content: '\2699'; }
-  .selfdev .body { font-size: 15.5px; line-height: 1.45; white-space: pre-wrap; }
+  .msg-briefing { background: rgba(255,179,71,.1); border: 1px solid rgba(255,179,71,.3); }
+  .msg-selfdev { background: rgba(145,132,217,.1); border: 1px solid rgba(145,132,217,.35); }
+  .msg-tag { font: 500 10px 'IBM Plex Mono'; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px; }
+  .msg-briefing .msg-tag { color: #ffb347; }
+  .msg-selfdev .msg-tag { color: var(--accent-light); }
 
   .confirm-box {
-    align-self: flex-start; background: var(--panel-solid); border: 1px solid rgba(124,92,255,0.4);
-    border-radius: 16px; padding: 14px 16px; max-width: 92%;
+    align-self: flex-start; background: #14151f; border: 1px solid rgba(145,132,217,.4);
+    border-radius: 10px; padding: 10px 12px; max-width: 92%;
   }
-  .confirm-box .label { color: var(--muted); font-size: 13px; letter-spacing: 0.5px; }
+  .confirm-box .label { color: var(--text-dim); font-size: 11.5px; }
   .confirm-box code {
-    display: block; background: #05070f; padding: 9px 11px; border-radius: 8px; margin: 8px 0;
-    overflow-x: auto; font-size: 13px; color: var(--cyan); border: 1px solid var(--border);
+    display: block; background: #0d0e15; padding: 8px 10px; border-radius: 7px; margin: 7px 0;
+    overflow-x: auto; font-size: 12px; color: var(--accent-light); border: 1px solid var(--tile-border);
   }
-  .confirm-buttons { display: flex; gap: 10px; margin-top: 8px; }
+  .confirm-buttons { display: flex; gap: 8px; margin-top: 4px; }
   .confirm-buttons button {
-    flex: 1; padding: 10px; border-radius: 9px; border: none; font-weight: 700; font-size: 14.5px;
-    cursor: pointer; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'Rajdhani', sans-serif;
+    flex: 1; padding: 7px; border-radius: 7px; border: none; font-weight: 600; font-size: 12px;
+    cursor: pointer; font-family: 'Inter';
   }
-  .btn-allow { background: linear-gradient(90deg, #3ddc84, #00e5ff); color: #05210f; }
+  .btn-allow { background: linear-gradient(90deg, #3ddc84, #00c2b8); color: #05210f; }
   .btn-deny { background: linear-gradient(90deg, #ff6b6b, #ff3d81); color: #2a0808; }
 
-  .thinking { align-self: flex-start; display: flex; gap: 5px; padding: 6px 4px; }
+  .thinking { align-self: flex-start; display: flex; gap: 4px; padding: 4px 2px; }
   .thinking span {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--cyan);
-    animation: blink 1.1s infinite ease-in-out;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+    animation: mpulse 1s infinite; opacity: .25;
   }
-  .thinking span:nth-child(2) { animation-delay: 0.15s; }
-  .thinking span:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+  .thinking span:nth-child(2) { animation-delay: .2s; }
+  .thinking span:nth-child(3) { animation-delay: .4s; }
+  @keyframes mpulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
-  form#inputbar {
-    position: relative; z-index: 1;
-    flex: 0 0 auto; display: flex; gap: 10px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border); background: rgba(5,7,16,0.7); backdrop-filter: blur(10px);
+  #chat-quick { display: flex; gap: 8px; padding: 0 16px 10px; flex-wrap: wrap; }
+  #chat-quick button {
+    padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: transparent;
+    color: var(--text-dim); font: 400 11.5px 'Inter'; cursor: pointer;
   }
+  #chat-quick button:hover { border-color: var(--accent); color: var(--accent-text); }
+
+  form#inputbar { height: 60px; padding: 0 12px 0 18px; gap: 10px; display: flex; align-items: center; border-top: 1px solid var(--tile-border); }
+  .prompt-caret { font: 400 12px 'IBM Plex Mono'; color: var(--accent); flex: 0 0 auto; }
   #text {
-    flex: 1; font-size: 16px; padding: 13px 16px; border-radius: 22px; border: 1px solid var(--border);
-    background: rgba(15,20,35,0.7); color: var(--text); font-family: inherit;
+    flex: 1; background: transparent; border: none; outline: none; color: var(--text);
+    font: 400 13px 'Inter'; min-width: 0;
   }
-  #text:focus { outline: none; border-color: var(--cyan); }
+  #text::placeholder { color: var(--text-weak); }
   #mic {
-    width: 46px; height: 46px; flex: 0 0 auto; border-radius: 50%; border: 1px solid var(--border);
-    background: rgba(15,20,35,0.7); color: var(--text); font-size: 19px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+    width: 34px; height: 34px; flex: 0 0 auto; border-radius: 8px; border: 1px solid var(--border-strong);
+    background: transparent; color: var(--text-dim); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
   }
-  #mic.listening {
-    background: linear-gradient(90deg, #ff6b6b, #ff3d81); border-color: transparent;
-    box-shadow: 0 0 0 0 rgba(255,107,107,0.6); animation: mic-pulse 1.4s ease-out infinite;
-  }
-  @keyframes mic-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255,107,107,0.5); }
-    70% { box-shadow: 0 0 0 14px rgba(255,107,107,0); }
-    100% { box-shadow: 0 0 0 0 rgba(255,107,107,0); }
-  }
-  #mic:disabled { opacity: 0.35; cursor: default; }
+  #mic.listening { border-color: var(--accent-light); color: var(--accent-brightest); box-shadow: 0 0 8px rgba(181,171,252,.5); }
+  #mic:disabled { opacity: .35; cursor: default; }
   #send {
-    padding: 0 20px; border-radius: 22px; border: none;
-    background: linear-gradient(90deg, var(--cyan), var(--violet)); color: #05070f; font-weight: 700;
-    letter-spacing: 0.5px; text-transform: uppercase; font-family: 'Rajdhani', sans-serif;
+    width: 38px; height: 38px; flex: 0 0 auto; border-radius: 9px; border: 1px solid var(--accent);
+    background: rgba(145,132,217,.14); color: var(--accent-text); font-size: 16px; cursor: pointer;
   }
-  #send:disabled { opacity: 0.5; }
+  #send:hover { background: rgba(145,132,217,.28); }
+  #send:disabled { opacity: .5; }
 </style>
 </head>
 <body>
-<header>
-  <div class="brand"><div class="core-dot"></div><h1>MONI</h1></div>
-  <div class="actions">
-    <a href="#" id="reset">Verlauf löschen</a>
-    <a href="/logout">Abmelden</a>
+<div class="overlay-grid"></div>
+<div class="overlay-glow"></div>
+
+<div id="topbar">
+  <div class="wordmark">Moni</div>
+  <div class="datetime mono" id="topbar-datetime">–</div>
+  <div class="spacer"></div>
+  <div class="stats">
+    <span>CPU <b id="stat-cpu">–</b></span>
+    <span>RAM <b id="stat-ram">–</b></span>
+    <span class="online" id="stat-online">● online</span>
   </div>
-</header>
-<nav class="tabs">
-  <button id="tab-dashboard" class="active">Dashboard</button>
-  <button id="tab-chat">Chat</button>
-</nav>
-
-<div class="view" id="dashboard">
-  <div class="hud-grid">
-
-    <div class="hud-col left">
-      <div class="hud-panel" id="panel-status">
-        <div class="hud-panel-title"><span>System Status</span><span class="dot" id="server-dot"></span></div>
-        <div class="gauge-row">
-          <div><div class="gauge" id="gauge-cpu"></div></div>
-          <div><div class="gauge" id="gauge-ram"></div></div>
-          <div><div class="gauge" id="gauge-disk"></div></div>
-        </div>
-        <div class="hud-sub" style="text-align:center;">CPU · RAM · Speicher (Droplet)</div>
-      </div>
-
-      <div class="hud-panel" id="panel-memory">
-        <div class="hud-panel-title"><span>Gedächtnis &amp; Portfolio</span><span class="dot"></span></div>
-        <div class="bar-stat">
-          <div class="bar-label"><span>Über dich gelernt</span><b id="stat-profile">0</b></div>
-          <div class="bar-track"><div class="bar-fill" id="bar-profile" style="width:0%"></div></div>
-        </div>
-        <div class="bar-stat">
-          <div class="bar-label"><span>Portfolio-Positionen</span><b id="stat-portfolio">0</b></div>
-          <div class="bar-track"><div class="bar-fill" id="bar-portfolio" style="width:0%"></div></div>
-        </div>
-      </div>
-
-      <div class="hud-panel" id="panel-capabilities">
-        <div class="hud-panel-title"><span>Fähigkeiten</span><span class="dot"></span></div>
-        <div class="chip-grid" id="tool-chips"></div>
-      </div>
-    </div>
-
-    <div class="hud-col center">
-      <div class="hud-center-inner">
-        <h1 class="hud-title">MONI</h1>
-        <div class="hud-tagline">Persönlicher Assistent</div>
-        <div class="globe-wrap">
-          <canvas id="core-canvas"></canvas>
-          <div class="core-label">MONI</div>
-        </div>
-        <div class="hud-base"></div>
-        <div class="hud-status-line">System aktiv</div>
-        <div class="hud-model-line" id="hero-model">–</div>
-      </div>
-    </div>
-
-    <div class="hud-col right">
-      <div class="hud-panel" id="panel-weather">
-        <div class="hud-panel-title"><span>Wetter</span><span class="dot off" id="weather-dot"></span></div>
-        <div class="hud-value" id="weather-value">Kein Standort</div>
-        <div class="hud-sub" id="weather-sub">Sag Moni im Chat, wo du wohnst</div>
-      </div>
-
-      <div class="hud-panel" id="panel-calendar">
-        <div class="hud-panel-title"><span>Kalender</span><span class="dot off"></span></div>
-        <div class="hud-value" id="cal-time" style="font-size:17px;">–</div>
-        <div class="hud-sub" id="cal-date">–</div>
-        <div class="cal-strip" id="cal-strip"></div>
-        <div class="hud-sub" style="margin-top:8px;">Sync noch nicht verbunden</div>
-      </div>
-
-      <div class="hud-panel" id="panel-briefing">
-        <div class="hud-panel-title"><span>Nächstes Briefing</span><span class="dot"></span></div>
-        <div class="hud-value" id="stat-briefing">–</div>
-        <div class="hud-sub" id="stat-briefing-caption">–</div>
-      </div>
-
-      <div class="hud-panel" id="panel-pins">
-        <div class="hud-panel-title"><span>Deine Pins</span><span class="dot"></span></div>
-        <div id="widget-list">
-          <div class="hud-sub" id="pins-empty">Noch nichts angeheftet</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  <a class="session-link" href="#" id="reset">Verlauf löschen</a>
+  <a class="session-link" href="/logout">Abmelden</a>
+  <button id="edit-toggle">Kacheln anpassen</button>
 </div>
 
-<div class="view" id="chat-view" hidden>
-  <div id="log"></div>
+<div id="edit-bar">
+  <span class="label mono">AUSGEBLENDET</span>
+  <div id="hidden-chips"></div>
+</div>
+
+<div id="grid">
+  <div id="kern-tile">
+    <moni-core accent="#b5abfc" accent2="#9184d9"></moni-core>
+    <div class="kern-overlay">
+      <div class="kern-top">
+        <div>
+          <div class="kern-kicker mono">Kern · aktiv</div>
+          <div class="kern-title">Ich höre zu.</div>
+        </div>
+        <div class="kern-meta mono">
+          <div id="kern-model">Modell –</div>
+          <div id="kern-context">Kontext – %</div>
+          <div class="hl" id="kern-latency">Latenz – ms</div>
+        </div>
+      </div>
+      <div class="kern-bottom">
+        <div class="kern-wave" id="kern-wave"></div>
+        <div class="kern-hint mono">Ziehen zum Drehen</div>
+      </div>
+    </div>
+  </div>
+  <!-- generic tiles injected here -->
+</div>
+
+<div id="chat-dock">
+  <div id="chat-log"></div>
+  <div id="chat-quick">
+    <button data-msg="Wie sieht mein Tagesplan aus?">Tagesplan</button>
+    <button data-msg="Heft eine Notiz auf meiner Startseite an.">Notiz anheften</button>
+    <button data-msg="Was steht auf meiner Aufgabenliste?">Aufgaben</button>
+  </div>
   <form id="inputbar">
+    <span class="prompt-caret mono">&gt;</span>
+    <input id="text" placeholder="Sprich mit Moni oder tippe …" autocomplete="off" />
     <button id="mic" type="button" title="Spracheingabe">🎤</button>
-    <input id="text" placeholder="Nachricht an Moni…" autocomplete="off" />
-    <button id="send" type="submit">Senden</button>
+    <button id="send" type="submit">↑</button>
   </form>
 </div>
 
 <script>
-const log = document.getElementById('log');
+/* ---- Waveform bars ---- */
+(function () {
+  const wave = document.getElementById('kern-wave');
+  const colors = ['#5d5294', '#796cbf', '#9184d9', '#b5abfc'];
+  for (let i = 0; i < 10; i++) {
+    const bar = document.createElement('span');
+    bar.style.background = colors[i % colors.length];
+    bar.style.animationDelay = (i * 0.09) + 's';
+    wave.appendChild(bar);
+  }
+})();
+
+/* ---- Topbar clock ---- */
+function renderTopbarClock() {
+  const now = new Date();
+  const date = now.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' });
+  const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('topbar-datetime').textContent = `${date} · ${time}`;
+}
+renderTopbarClock();
+setInterval(renderTopbarClock, 30000);
+
+/* =========================================================
+   Tile grid: state, rendering, edit mode, drag & drop
+   ========================================================= */
+let tiles = [
+  { id: 'termine', w: 1, h: 2, on: true },
+  { id: 'wetter', w: 1, h: 1, on: true },
+  { id: 'ziele', w: 1, h: 1, on: true },
+  { id: 'portfolio', w: 2, h: 1, on: true },
+  { id: 'aufgaben', w: 1, h: 1, on: true },
+  { id: 'aktivitaet', w: 1, h: 1, on: true },
+  { id: 'gedaechtnis', w: 1, h: 1, on: false },
+];
+let editMode = false;
+let dragId = null;
+let lastStatus = null;
+
+const grid = document.getElementById('grid');
+const kernTileEl = document.getElementById('kern-tile');
+const editBar = document.getElementById('edit-bar');
+const hiddenChips = document.getElementById('hidden-chips');
+const editToggle = document.getElementById('edit-toggle');
+
+function tileTitle(t) {
+  const s = lastStatus || {};
+  if (t.id === 'termine') return 'Termine';
+  if (t.id === 'wetter') return (s.weather && s.weather.city) || 'Wetter';
+  if (t.id === 'ziele') return 'Ziele';
+  if (t.id === 'portfolio') return 'Portfolio';
+  if (t.id === 'aufgaben') return 'Aufgaben';
+  if (t.id === 'aktivitaet') return 'Live-Aktivität';
+  if (t.id === 'gedaechtnis') return `Gedächtnis · ${s.profile_facts ?? 0} Fakten`;
+  return t.id;
+}
+
+function renderTermineBody() {
+  const wrap = document.createElement('div');
+  const note = document.createElement('div');
+  note.className = 'empty-note';
+  note.textContent = 'Kalender nicht verbunden.';
+  wrap.appendChild(note);
+  return wrap;
+}
+
+function renderWetterBody(weather) {
+  const wrap = document.createElement('div');
+  if (!weather) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Kein Standort hinterlegt. Sag Moni im Chat, wo du wohnst.';
+    wrap.appendChild(note);
+    return wrap;
+  }
+  const temp = document.createElement('div');
+  temp.className = 'weather-temp';
+  temp.textContent = Math.round(weather.temperature) + '°';
+  const cond = document.createElement('div');
+  cond.className = 'weather-cond';
+  cond.textContent = weather.condition;
+  wrap.appendChild(temp);
+  wrap.appendChild(cond);
+  return wrap;
+}
+
+function renderZieleBody(goals) {
+  const wrap = document.createElement('div');
+  if (!goals || !goals.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Noch keine Ziele gesetzt.';
+    wrap.appendChild(note);
+    return wrap;
+  }
+  for (const g of goals) {
+    const pct = g.target ? Math.min(100, Math.round(g.current / g.target * 100)) : 0;
+    const row = document.createElement('div');
+    row.className = 'goal-row';
+    row.innerHTML = `
+      <div class="goal-label-row"><span>${escapeHtml(g.label)}</span><span class="goal-value mono">${g.current}/${g.target}</span></div>
+      <div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div>
+    `;
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
+
+function renderPortfolioBody(positions) {
+  const wrap = document.createElement('div');
+  if (!positions || !positions.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Keine Positionen hinterlegt.';
+    wrap.appendChild(note);
+    return wrap;
+  }
+  for (const name of positions) {
+    const chip = document.createElement('div');
+    chip.className = 'portfolio-chip';
+    chip.textContent = name;
+    wrap.appendChild(chip);
+  }
+  return wrap;
+}
+
+function renderAufgabenBody(todoItems) {
+  const wrap = document.createElement('div');
+  if (!todoItems || !todoItems.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Keine Aufgaben.';
+    wrap.appendChild(note);
+    return wrap;
+  }
+  todoItems.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'todo-row' + (item.done ? ' done' : '');
+    const box = document.createElement('div');
+    box.className = 'todo-box';
+    const text = document.createElement('div');
+    text.className = 'todo-text';
+    text.textContent = item.text;
+    row.appendChild(box);
+    row.appendChild(text);
+    row.addEventListener('click', async () => {
+      await api('/api/todo/toggle', { index: idx });
+      loadStatus();
+    });
+    wrap.appendChild(row);
+  });
+  const openCount = todoItems.filter(t => !t.done).length;
+  const footer = document.createElement('div');
+  footer.className = 'todo-footer mono';
+  footer.textContent = `${openCount} offen`;
+  wrap.appendChild(footer);
+  return wrap;
+}
+
+function renderAktivitaetBody(entries) {
+  const wrap = document.createElement('div');
+  if (!entries || !entries.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Noch keine Aktivität.';
+    wrap.appendChild(note);
+    return wrap;
+  }
+  entries.slice(0, 3).forEach((e, idx) => {
+    const row = document.createElement('div');
+    row.className = 'act-row' + (idx === 0 ? ' latest' : '');
+    row.innerHTML = `<span class="act-dot"></span><span>${escapeHtml(e.text)} · <span class="act-time mono">${escapeHtml(e.relative)}</span></span>`;
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+function renderGedaechtnisBody(factList) {
+  const wrap = document.createElement('div');
+  if (!factList || !factList.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Noch nichts gemerkt.';
+    wrap.appendChild(note);
+    return wrap;
+  }
+  factList.slice().reverse().forEach((f, idx) => {
+    const row = document.createElement('div');
+    row.className = 'fact-row' + (idx === 0 ? ' latest' : '');
+    row.textContent = `„${f.fact}"`;
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+function renderTileBody(t) {
+  const s = lastStatus || {};
+  switch (t.id) {
+    case 'termine': return renderTermineBody();
+    case 'wetter': return renderWetterBody(s.weather);
+    case 'ziele': return renderZieleBody(s.goals);
+    case 'portfolio': return renderPortfolioBody(s.portfolio_positions);
+    case 'aufgaben': return renderAufgabenBody(s.todos);
+    case 'aktivitaet': return renderAktivitaetBody(s.activity);
+    case 'gedaechtnis': return renderGedaechtnisBody(s.profile_fact_list);
+    default: return document.createElement('div');
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function buildTileEl(t) {
+  const el = document.createElement('div');
+  el.className = 'tile';
+  el.id = 'tile-' + t.id;
+  el.dataset.id = t.id;
+  el.style.gridColumn = 'span ' + t.w;
+  el.style.gridRow = 'span ' + t.h;
+
+  const head = document.createElement('div');
+  head.className = 'tile-head';
+  const title = document.createElement('div');
+  title.className = 'tile-title mono';
+  title.textContent = tileTitle(t);
+  head.appendChild(title);
+
+  if (editMode) {
+    const actions = document.createElement('div');
+    actions.className = 'tile-actions';
+
+    const widthBtn = document.createElement('button');
+    widthBtn.textContent = '↔';
+    widthBtn.title = 'Breite umschalten';
+    widthBtn.addEventListener('click', () => { t.w = t.w === 1 ? 2 : 1; renderGrid(); });
+
+    const heightBtn = document.createElement('button');
+    heightBtn.textContent = '↕';
+    heightBtn.title = 'Höhe umschalten';
+    heightBtn.addEventListener('click', () => { t.h = t.h === 1 ? 2 : 1; renderGrid(); });
+
+    const hideBtn = document.createElement('button');
+    hideBtn.textContent = '✕';
+    hideBtn.className = 'danger';
+    hideBtn.title = 'Ausblenden';
+    hideBtn.addEventListener('click', () => { t.on = false; renderGrid(); });
+
+    actions.appendChild(widthBtn);
+    actions.appendChild(heightBtn);
+    actions.appendChild(hideBtn);
+    head.appendChild(actions);
+
+    el.draggable = true;
+    el.addEventListener('dragstart', () => { dragId = t.id; el.classList.add('dragging'); });
+    el.addEventListener('dragend', () => { dragId = null; el.classList.remove('dragging'); });
+    el.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!dragId || dragId === t.id) return;
+      const fromIdx = tiles.findIndex(x => x.id === dragId);
+      const toIdx = tiles.findIndex(x => x.id === t.id);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = tiles.splice(fromIdx, 1);
+      tiles.splice(toIdx, 0, moved);
+      renderGrid();
+    });
+  }
+
+  const body = document.createElement('div');
+  body.className = 'tile-body';
+  body.appendChild(renderTileBody(t));
+
+  el.appendChild(head);
+  el.appendChild(body);
+  return el;
+}
+
+function renderEditBar() {
+  const hiddenTiles = tiles.filter(t => !t.on);
+  editBar.classList.toggle('show', editMode && hiddenTiles.length > 0);
+  hiddenChips.innerHTML = '';
+  for (const t of hiddenTiles) {
+    const chip = document.createElement('button');
+    chip.className = 'chip-hidden';
+    chip.textContent = tileTitle(t);
+    chip.addEventListener('click', () => { t.on = true; renderGrid(); });
+    hiddenChips.appendChild(chip);
+  }
+}
+
+function renderGrid() {
+  grid.querySelectorAll('.tile').forEach(el => el.remove());
+  for (const t of tiles) {
+    if (!t.on) continue;
+    grid.appendChild(buildTileEl(t));
+  }
+  renderEditBar();
+}
+
+editToggle.addEventListener('click', () => {
+  editMode = !editMode;
+  editToggle.textContent = editMode ? 'Fertig' : 'Kacheln anpassen';
+  renderGrid();
+});
+
+/* ---- Topic emphasis when a tile's subject comes up in chat ---- */
+const TOOL_TO_TILE = {
+  list_portfolio: 'portfolio', add_portfolio_position: 'portfolio', remove_portfolio_position: 'portfolio',
+  remember_about_user: 'gedaechtnis', recall_about_user: 'gedaechtnis', forget_about_user: 'gedaechtnis',
+  set_location: 'wetter',
+  list_todos: 'aufgaben', add_todo: 'aufgaben', complete_todo: 'aufgaben', remove_todo: 'aufgaben',
+  list_goals: 'ziele', set_goal: 'ziele', update_goal_progress: 'ziele', remove_goal: 'ziele',
+};
+
+function emphasizeTiles(toolsUsed) {
+  if (!toolsUsed || !toolsUsed.length) return;
+  const ids = new Set(toolsUsed.map(t => TOOL_TO_TILE[t]).filter(Boolean));
+  ids.forEach(id => {
+    const el = document.getElementById('tile-' + id);
+    if (!el) return;
+    el.classList.add('emphasize');
+    setTimeout(() => el.classList.remove('emphasize'), 6000);
+  });
+  if (ids.size) loadStatus();
+}
+
+/* =========================================================
+   Status polling
+   ========================================================= */
+async function loadStatus() {
+  try {
+    const res = await fetch('/api/status');
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    const data = await res.json();
+    lastStatus = data;
+
+    document.getElementById('kern-model').textContent = 'Modell ' + (data.model || '–');
+    document.getElementById('kern-context').textContent = 'Kontext ' + (data.context_pct != null ? data.context_pct + ' %' : '–');
+    document.getElementById('kern-latency').textContent = 'Latenz ' + (data.latency_ms != null ? data.latency_ms + ' ms' : '–');
+
+    const sys = data.system || {};
+    const cpuPct = sys.load1 != null ? Math.min(100, Math.round(sys.load1 * 100)) : null;
+    document.getElementById('stat-cpu').textContent = cpuPct != null ? cpuPct + ' %' : '–';
+    document.getElementById('stat-ram').textContent = sys.mem_used_percent != null ? sys.mem_used_percent + ' %' : '–';
+    document.getElementById('stat-online').style.opacity = cpuPct != null ? '1' : '.4';
+
+    renderGrid();
+  } catch (err) {
+    document.getElementById('stat-online').style.opacity = '.4';
+  }
+}
+loadStatus();
+setInterval(loadStatus, 15000);
+
+/* =========================================================
+   Chat dock (reuses the existing agent loop / confirm flow)
+   ========================================================= */
+const chatLog = document.getElementById('chat-log');
 const form = document.getElementById('inputbar');
 const textEl = document.getElementById('text');
 const sendBtn = document.getElementById('send');
 
-function scrollDown() { log.scrollTop = log.scrollHeight; }
+function scrollDown() { chatLog.scrollTop = chatLog.scrollHeight; }
 
 function addBubble(role, text) {
-  const div = document.createElement('div');
-  div.className = 'bubble ' + role;
-  div.textContent = text;
-  log.appendChild(div);
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + role;
+  if (role === 'moni') {
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    const span = document.createElement('div');
+    span.className = 'msg-text';
+    span.textContent = text;
+    row.appendChild(avatar);
+    row.appendChild(span);
+  } else {
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = text;
+    row.appendChild(bubble);
+  }
+  chatLog.appendChild(row);
   scrollDown();
-  return div;
+  return row;
 }
 
 function addBriefing(text) {
   const box = document.createElement('div');
-  box.className = 'briefing';
-  const tag = document.createElement('div');
-  tag.className = 'tag';
-  tag.textContent = 'Morgen-Briefing';
-  const body = document.createElement('div');
-  body.className = 'body';
-  body.textContent = text;
-  box.appendChild(tag);
-  box.appendChild(body);
-  log.appendChild(box);
+  box.className = 'msg-briefing';
+  box.innerHTML = `<div class="msg-tag mono">Morgen-Briefing</div><div>${escapeHtml(text)}</div>`;
+  chatLog.appendChild(box);
   scrollDown();
 }
 
 function addSelfDevSuggestion(text) {
   const box = document.createElement('div');
-  box.className = 'selfdev';
-  const tag = document.createElement('div');
-  tag.className = 'tag';
-  tag.textContent = 'Verbesserungsvorschlag';
-  const body = document.createElement('div');
-  body.className = 'body';
-  body.textContent = text;
-  box.appendChild(tag);
-  box.appendChild(body);
-  log.appendChild(box);
+  box.className = 'msg-selfdev';
+  box.innerHTML = `<div class="msg-tag mono">Verbesserungsvorschlag</div><div>${escapeHtml(text)}</div>`;
+  chatLog.appendChild(box);
   scrollDown();
 }
 
 function addSystem(text) {
   const div = document.createElement('div');
-  div.className = 'system';
+  div.className = 'msg-system';
   div.textContent = text;
-  log.appendChild(div);
+  chatLog.appendChild(div);
   scrollDown();
 }
 
@@ -448,7 +729,7 @@ function addThinking() {
   const div = document.createElement('div');
   div.className = 'thinking';
   div.innerHTML = '<span></span><span></span><span></span>';
-  log.appendChild(div);
+  chatLog.appendChild(div);
   scrollDown();
   return div;
 }
@@ -496,7 +777,7 @@ function addConfirm(tool, input) {
   buttons.appendChild(deny);
   box.appendChild(buttons);
 
-  log.appendChild(box);
+  chatLog.appendChild(box);
   scrollDown();
 }
 
@@ -525,7 +806,7 @@ function speak(text) {
   window.speechSynthesis.speak(utter);
 }
 
-/* ---- Voice input (speak to Moni instead of typing) ---- */
+/* ---- Voice input ---- */
 const micBtn = document.getElementById('mic');
 const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -540,11 +821,8 @@ if (SpeechRecognitionImpl) {
   recognizer.onend = () => {
     recognizing = false;
     micBtn.classList.remove('listening');
-    // iOS Safari shares one audio session between mic and speaker - after
-    // using SpeechRecognition, speechSynthesis can silently stop working
-    // until "re-primed". Doing that now, while still close to the user's
-    // mic tap, unblocks the real speak() call that comes later (after the
-    // chat round-trip, i.e. no longer gesture-adjacent).
+    // iOS Safari shares one audio session between mic and speaker - re-prime
+    // speechSynthesis here (still gesture-adjacent) so it keeps working.
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
@@ -567,47 +845,13 @@ if (SpeechRecognitionImpl) {
   };
 
   micBtn.addEventListener('click', () => {
-    if (recognizing) {
-      recognizer.stop();
-      return;
-    }
-    if (chatView.hidden) showTab('chat');
-    window.speechSynthesis.cancel(); // don't listen while Moni is still talking
+    if (recognizing) { recognizer.stop(); return; }
+    window.speechSynthesis.cancel();
     try { recognizer.start(); } catch (err) { /* already starting */ }
   });
 } else {
   micBtn.disabled = true;
   micBtn.title = 'Spracheingabe wird von diesem Browser nicht unterstützt';
-}
-
-/* ---- Dashboard panel emphasis when a topic is discussed ---- */
-const TOOL_TO_PANEL = {
-  list_portfolio: 'panel-memory',
-  add_portfolio_position: 'panel-memory',
-  remove_portfolio_position: 'panel-memory',
-  remember_about_user: 'panel-memory',
-  recall_about_user: 'panel-memory',
-  forget_about_user: 'panel-memory',
-  set_location: 'panel-weather',
-  pin_to_dashboard: 'panel-pins',
-  unpin_from_dashboard: 'panel-pins',
-  run_shell_command: 'panel-capabilities',
-  read_file: 'panel-capabilities',
-  write_file: 'panel-capabilities',
-  list_directory: 'panel-capabilities',
-  propose_code_change: 'panel-capabilities',
-};
-
-function emphasizePanels(toolsUsed) {
-  if (!toolsUsed || !toolsUsed.length) return;
-  const ids = new Set(toolsUsed.map(t => TOOL_TO_PANEL[t]).filter(Boolean));
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add('emphasize');
-    setTimeout(() => el.classList.remove('emphasize'), 6000);
-  });
-  if (ids.size) loadStatus();
 }
 
 function handleResult(data, thinkingEl) {
@@ -618,7 +862,7 @@ function handleResult(data, thinkingEl) {
     addBubble('moni', data.text);
     setBusy(false);
     speak(data.text);
-    emphasizePanels(data.tools_used);
+    emphasizeTiles(data.tools_used);
   } else {
     addSystem('[Fehler] ' + (data.text || 'Unbekannter Fehler'));
     setBusy(false);
@@ -646,33 +890,38 @@ async function resolveConfirm(approved, box) {
   handleResult(data, thinkingEl);
 }
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const text = textEl.value.trim();
-  if (!text) return;
+async function sendMessage(text) {
   addBubble('user', text);
   textEl.value = '';
   setBusy(true);
   const thinkingEl = addThinking();
   const data = await api('/api/chat', { message: text });
   handleResult(data, thinkingEl);
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = textEl.value.trim();
+  if (!text) return;
+  sendMessage(text);
+});
+
+document.querySelectorAll('#chat-quick button').forEach(btn => {
+  btn.addEventListener('click', () => sendMessage(btn.dataset.msg));
 });
 
 document.getElementById('reset').addEventListener('click', async (e) => {
   e.preventDefault();
   if (!confirm('Gesprächsverlauf wirklich löschen?')) return;
   await api('/api/reset', {});
-  log.innerHTML = '';
+  chatLog.innerHTML = '';
   addSystem('Verlauf gelöscht.');
 });
 
 async function loadHistory() {
   try {
     const res = await fetch('/api/history');
-    if (res.status === 401) {
-      window.location.href = '/login';
-      return;
-    }
+    if (res.status === 401) { window.location.href = '/login'; return; }
     const items = await res.json();
     if (!items.length) {
       addSystem('Noch kein Verlauf – schreib Moni etwas.');
@@ -687,286 +936,7 @@ async function loadHistory() {
     addSystem('Verlauf konnte nicht geladen werden.');
   }
 }
-
 loadHistory();
-
-/* ---- Tabs ---- */
-const tabDashboard = document.getElementById('tab-dashboard');
-const tabChat = document.getElementById('tab-chat');
-const dashboardView = document.getElementById('dashboard');
-const chatView = document.getElementById('chat-view');
-
-function showTab(tab) {
-  const showDash = tab === 'dashboard';
-  dashboardView.hidden = !showDash;
-  chatView.hidden = showDash;
-  tabDashboard.classList.toggle('active', showDash);
-  tabChat.classList.toggle('active', !showDash);
-  if (showDash) loadStatus();
-  else textEl.focus();
-}
-tabDashboard.addEventListener('click', () => showTab('dashboard'));
-tabChat.addEventListener('click', () => showTab('chat'));
-
-/* ---- Dashboard data ---- */
-const TOOL_LABELS = {
-  run_shell_command: 'Shell-Befehle',
-  read_file: 'Dateien lesen',
-  write_file: 'Dateien schreiben',
-  list_directory: 'Verzeichnisse',
-  web_search: 'Websuche',
-  list_portfolio: 'Portfolio ansehen',
-  add_portfolio_position: 'Portfolio ergänzen',
-  remove_portfolio_position: 'Portfolio bereinigen',
-  remember_about_user: 'Über dich lernen',
-  recall_about_user: 'Erinnerungen abrufen',
-  forget_about_user: 'Erinnerungen löschen',
-  set_location: 'Standort merken',
-  pin_to_dashboard: 'Auf Startseite heften',
-  unpin_from_dashboard: 'Pin entfernen',
-  propose_code_change: 'Sich selbst weiterentwickeln',
-};
-
-function gaugeColor(pct) {
-  if (pct === null || pct === undefined) return '#3a4256';
-  if (pct < 60) return '#3ddc84';
-  if (pct < 85) return '#ffb347';
-  return '#ff6b6b';
-}
-
-function renderGauge(el, pct, caption) {
-  el.innerHTML = '';
-  const color = gaugeColor(pct);
-  const value = pct === null || pct === undefined ? 0 : pct;
-  el.style.background = `conic-gradient(${color} ${value * 3.6}deg, rgba(255,255,255,0.06) 0deg)`;
-  const inner = document.createElement('div');
-  inner.style.cssText = 'width:42px;height:42px;border-radius:50%;background:#0d1220;display:flex;align-items:center;justify-content:center;';
-  const span = document.createElement('span');
-  span.className = 'pct';
-  span.style.color = color;
-  span.textContent = pct === null || pct === undefined ? '–' : Math.round(pct) + '%';
-  inner.appendChild(span);
-  el.appendChild(inner);
-  const cap = document.createElement('div');
-  cap.className = 'gcap';
-  cap.textContent = caption;
-  el.appendChild(cap);
-}
-
-function renderWidgets(items) {
-  const list = document.getElementById('widget-list');
-  list.innerHTML = '';
-  if (!items.length) {
-    const empty = document.createElement('div');
-    empty.className = 'hud-sub';
-    empty.id = 'pins-empty';
-    empty.textContent = 'Noch nichts angeheftet';
-    list.appendChild(empty);
-    return;
-  }
-  for (const item of items) {
-    const row = document.createElement('div');
-    row.className = 'widget-panel';
-
-    const label = document.createElement('div');
-    label.className = 'bar-label';
-    const span = document.createElement('span');
-    span.textContent = item.title;
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'widget-remove';
-    removeBtn.textContent = '×';
-    removeBtn.addEventListener('click', async () => {
-      await api('/api/unpin', { title: item.title });
-      loadStatus();
-    });
-    label.appendChild(span);
-    label.appendChild(removeBtn);
-
-    const content = document.createElement('div');
-    content.className = 'widget-content';
-    content.textContent = item.content;
-
-    row.appendChild(label);
-    row.appendChild(content);
-    list.appendChild(row);
-  }
-}
-
-function renderCalendar() {
-  const now = new Date();
-  document.getElementById('cal-time').textContent = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  document.getElementById('cal-date').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-
-  const strip = document.getElementById('cal-strip');
-  strip.innerHTML = '';
-  const dayLabels = ['Mo','Di','Mi','Do','Fr','Sa','So'];
-  const todayIdx = (now.getDay() + 6) % 7; // Monday = 0
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - todayIdx);
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const cell = document.createElement('div');
-    cell.className = 'cal-day' + (i === todayIdx ? ' today' : '');
-    cell.innerHTML = `${dayLabels[i]}<span class="num">${d.getDate()}</span>`;
-    strip.appendChild(cell);
-  }
-}
-renderCalendar();
-setInterval(renderCalendar, 60000);
-
-async function loadStatus() {
-  try {
-    const res = await fetch('/api/status');
-    if (res.status === 401) { window.location.href = '/login'; return; }
-    const data = await res.json();
-
-    document.getElementById('hero-model').textContent = data.model;
-    document.getElementById('stat-profile').textContent = data.profile_facts;
-    document.getElementById('stat-portfolio').textContent = data.portfolio_count;
-    document.getElementById('bar-profile').style.width = Math.min(100, data.profile_facts * 10) + '%';
-    document.getElementById('bar-portfolio').style.width = Math.min(100, data.portfolio_count * 8) + '%';
-
-    const next = new Date(data.next_briefing);
-    document.getElementById('stat-briefing').textContent = next.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('stat-briefing-caption').textContent = next.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' });
-
-    if (data.weather) {
-      document.getElementById('weather-value').textContent = Math.round(data.weather.temperature) + '°C';
-      document.getElementById('weather-sub').textContent = `${data.weather.city} · ${data.weather.condition}`;
-      document.getElementById('weather-dot').classList.remove('off');
-    } else {
-      document.getElementById('weather-value').textContent = 'Kein Standort';
-      document.getElementById('weather-sub').textContent = 'Sag Moni im Chat, wo du wohnst';
-      document.getElementById('weather-dot').classList.add('off');
-    }
-
-    const sys = data.system || {};
-    const cpuPct = sys.load1 !== null && sys.load1 !== undefined ? Math.min(100, sys.load1 * 100) : null;
-    renderGauge(document.getElementById('gauge-cpu'), cpuPct, 'CPU');
-    renderGauge(document.getElementById('gauge-ram'), sys.mem_used_percent, 'RAM');
-    renderGauge(document.getElementById('gauge-disk'), sys.disk_used_percent, 'Disk');
-    document.getElementById('server-dot').classList.toggle('off', cpuPct === null);
-
-    const chipGrid = document.getElementById('tool-chips');
-    chipGrid.innerHTML = '';
-    for (const name of data.tools) {
-      const chip = document.createElement('div');
-      chip.className = 'chip';
-      chip.textContent = TOOL_LABELS[name] || name;
-      chipGrid.appendChild(chip);
-    }
-
-    renderWidgets(data.widgets || []);
-  } catch (err) {
-    // leave placeholders on failure
-  }
-}
-
-loadStatus();
-
-/* ---- 3D core ---- */
-function initCore() {
-  const canvas = document.getElementById('core-canvas');
-  const size = Math.min(window.innerWidth * 0.72, 300);
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(size, size, false);
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-  camera.position.z = 4.6;
-
-  const outer = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.55, 1),
-    new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true, transparent: true, opacity: 0.85 })
-  );
-  scene.add(outer);
-
-  const inner = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.95, 0),
-    new THREE.MeshBasicMaterial({ color: 0x7c5cff, wireframe: true, transparent: true, opacity: 0.55 })
-  );
-  scene.add(inner);
-
-  const core = new THREE.Mesh(
-    new THREE.SphereGeometry(0.42, 24, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })
-  );
-  scene.add(core);
-
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(2.05, 0.012, 8, 96),
-    new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.5 })
-  );
-  ring.rotation.x = Math.PI / 2.3;
-  scene.add(ring);
-
-  const ring2 = new THREE.Mesh(
-    new THREE.TorusGeometry(1.8, 0.008, 8, 96),
-    new THREE.MeshBasicMaterial({ color: 0x7c5cff, transparent: true, opacity: 0.4 })
-  );
-  ring2.rotation.x = Math.PI / 1.7;
-  ring2.rotation.y = Math.PI / 5;
-  scene.add(ring2);
-
-  const particleCount = 120;
-  const positions = new Float32Array(particleCount * 3);
-  for (let i = 0; i < particleCount; i++) {
-    const r = 2.3 + Math.random() * 0.6;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
-  }
-  const particleGeo = new THREE.BufferGeometry();
-  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const particles = new THREE.Points(
-    particleGeo,
-    new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.03, transparent: true, opacity: 0.6 })
-  );
-  scene.add(particles);
-
-  let frame;
-  function animate() {
-    frame = requestAnimationFrame(animate);
-    outer.rotation.y += 0.0035;
-    outer.rotation.x += 0.0012;
-    inner.rotation.y -= 0.005;
-    inner.rotation.x += 0.0025;
-    ring.rotation.z += 0.002;
-    ring2.rotation.z -= 0.0016;
-    particles.rotation.y += 0.0009;
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) cancelAnimationFrame(frame);
-    else animate();
-  });
-}
-
-if (window.THREE) {
-  try { initCore(); } catch (err) { /* canvas keeps its CSS gradient fallback */ }
-}
-
-/* ---- Tilt-on-touch for dashboard panels ---- */
-function addTilt(el) {
-  function handle(x, y) {
-    const rect = el.getBoundingClientRect();
-    const px = (x - rect.left) / rect.width - 0.5;
-    const py = (y - rect.top) / rect.height - 0.5;
-    el.style.transform = `rotateX(${(-py * 6).toFixed(2)}deg) rotateY(${(px * 6).toFixed(2)}deg)`;
-  }
-  function reset() { el.style.transform = ''; }
-  el.addEventListener('mousemove', (e) => handle(e.clientX, e.clientY));
-  el.addEventListener('mouseleave', reset);
-  el.addEventListener('touchmove', (e) => { const t = e.touches[0]; handle(t.clientX, t.clientY); }, { passive: true });
-  el.addEventListener('touchend', reset);
-}
-document.querySelectorAll('.hud-panel').forEach(addTilt);
 </script>
 </body>
 </html>
