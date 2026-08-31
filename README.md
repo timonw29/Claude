@@ -131,24 +131,22 @@ Tagesablauf, Vorlieben), merkt Moni es sich selbstständig (Tools
 gespeichert in `~/.moni/profile.json`) und bezieht es in künftige Antworten
 ein - ganz ohne erneutes Nachfragen.
 
-## Sprachausgabe (ElevenLabs)
+## Sprachausgabe
 
-Im Web-Modus liest Moni jede Chat-Antwort automatisch laut vor (ElevenLabs
-Text-to-Speech, `moni/tts.py`). Das Gehirn bleibt unverändert Claude mit
-allen Tools/Portfolio/Gedächtnis - ElevenLabs vertont nur den fertigen Text,
-es ist kein eigener Agent. Ohne gesetzten `ELEVENLABS_API_KEY` bleibt Moni
-stumm (Text-Bubble wird trotzdem angezeigt, Fehlschlag beim Sprechen ist
-lautlos). Key und Stimme unter [elevenlabs.io](https://elevenlabs.io) holen
-und in `.env` eintragen:
+Im Web-Modus liest Moni jede Chat-Antwort automatisch laut vor. Standardmäßig
+über die **kostenlose Sprachausgabe des Browsers** (Web Speech API,
+`speechSynthesis` in `moni/web_static/index.html`) - kein Account, kein API-
+Key, läuft komplett im Browser. Klingt etwas roboterhafter als eine
+Cloud-Stimme, kostet aber nichts.
 
-```bash
-ELEVENLABS_API_KEY=dein-key
-ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM   # Standard: "Rachel", änderbar
-```
-
-Hinweis: Mobile Browser blockieren Audio-Autoplay teils ohne aktive
-Nutzerinteraktion - beim ersten Öffnen der Seite kann ein Antippen nötig
-sein, danach spielt es im laufenden Chat automatisch ab.
+Für natürlichere Stimmen gibt es optional eine **ElevenLabs**-Anbindung
+(`moni/tts.py` + `POST /api/speak`), aktuell aber nicht aktiv verdrahtet im
+Frontend (die Browser-Stimme hat Vorrang). ElevenLabs' kostenloser Tarif
+erlaubt keine Bibliotheks-Stimmen über die API - dafür braucht es mindestens
+den Starter- oder Creator-Tarif (siehe [elevenlabs.io/pricing](https://elevenlabs.io/pricing)).
+Falls das später gewünscht ist: Key in `.env` eintragen und in `index.html`
+die `speak()`-Funktion wieder auf einen Aufruf von `/api/speak` umstellen
+statt `speechSynthesis`.
 
 ## Dashboard
 

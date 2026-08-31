@@ -367,21 +367,24 @@ function setBusy(busy) {
   textEl.disabled = busy;
 }
 
-async function speak(text) {
-  try {
-    const res = await fetch('/api/speak', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const audio = new Audio(URL.createObjectURL(blob));
-    await audio.play();
-  } catch (err) {
-    // Autoplay blocked or ElevenLabs unavailable - the text bubble already
-    // carries the answer, so this fails silently.
-  }
+let germanVoice = null;
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  const voices = window.speechSynthesis.getVoices();
+  germanVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('de')) || null;
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel(); // don't overlap with a previous reply
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'de-DE';
+  if (germanVoice) utter.voice = germanVoice;
+  window.speechSynthesis.speak(utter);
 }
 
 function handleResult(data, thinkingEl) {
