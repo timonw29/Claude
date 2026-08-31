@@ -500,7 +500,19 @@ if (SpeechRecognitionImpl) {
   let recognizing = false;
 
   recognizer.onstart = () => { recognizing = true; micBtn.classList.add('listening'); };
-  recognizer.onend = () => { recognizing = false; micBtn.classList.remove('listening'); };
+  recognizer.onend = () => {
+    recognizing = false;
+    micBtn.classList.remove('listening');
+    // iOS Safari shares one audio session between mic and speaker - after
+    // using SpeechRecognition, speechSynthesis can silently stop working
+    // until "re-primed". Doing that now, while still close to the user's
+    // mic tap, unblocks the real speak() call that comes later (after the
+    // chat round-trip, i.e. no longer gesture-adjacent).
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    }
+  };
   recognizer.onerror = (e) => {
     recognizing = false;
     micBtn.classList.remove('listening');
