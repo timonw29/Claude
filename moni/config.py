@@ -9,6 +9,7 @@ HISTORY_DIR = os.path.expanduser("~/.moni")
 HISTORY_FILE = os.path.join(HISTORY_DIR, "history.json")
 PORTFOLIO_FILE = os.path.join(HISTORY_DIR, "portfolio.json")
 PROFILE_FILE = os.path.join(HISTORY_DIR, "profile.json")
+LOCATION_FILE = os.path.join(HISTORY_DIR, "location.json")
 
 BRIEFING_TIME = os.environ.get("MONI_BRIEFING_TIME", "07:00")
 BRIEFING_TIMEZONE = os.environ.get("MONI_BRIEFING_TIMEZONE", "Europe/Berlin")
@@ -34,6 +35,8 @@ forget_about_user). Wenn der Nutzer beiläufig etwas über sich erzählt, das
 langfristig nützlich ist (z. B. Beruf, Tagesablauf, Vorlieben, wiederkehrende
 Themen), merke es dir proaktiv - ohne extra nachzufragen oder es anzukündigen.
 Nutze bereits bekannte Fakten selbstverständlich, ohne sie erst abzufragen.
+Erwähnt der Nutzer, wo er wohnt, speichere das mit set_location (nicht mit
+remember_about_user) - das Dashboard nutzt es für die Wetter-Kachel.
 
 Du führst außerdem eine einfache Liste der Aktien-/ETF-Positionen, die der
 Nutzer hält (Tools: list_portfolio, add_portfolio_position,

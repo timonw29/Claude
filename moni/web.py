@@ -10,7 +10,7 @@ import anthropic
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-from . import config, memory, portfolio, profile
+from . import config, memory, portfolio, profile, system_stats, weather
 from .tools import TOOLS, SAFE_TOOLS, CONFIRM_REQUIRED, run_tool
 
 BRIEFING_MARKER = "[AUTO-BRIEFING]"
@@ -301,6 +301,22 @@ def _start_scheduler():
     threading.Thread(target=_briefing_scheduler, daemon=True).start()
 
 
+_weather_cache = {"city": None, "data": None, "ts": 0}
+_WEATHER_TTL_SECONDS = 600
+
+
+def _cached_weather():
+    city = profile.get_location()
+    if not city:
+        return None
+    now = time.time()
+    if _weather_cache["city"] == city and now - _weather_cache["ts"] < _WEATHER_TTL_SECONDS:
+        return _weather_cache["data"]
+    data = weather.fetch_weather(city)
+    _weather_cache.update({"city": city, "data": data, "ts": now})
+    return data
+
+
 @app.get("/api/status")
 def status(request: Request):
     denied = _require_session(request)
@@ -314,5 +330,7 @@ def status(request: Request):
             "next_briefing": _next_briefing_datetime().isoformat(),
             "briefing_time": config.BRIEFING_TIME,
             "tools": sorted(t.get("name") or t.get("type") for t in TOOLS),
+            "weather": _cached_weather(),
+            "system": system_stats.get_system_stats(),
         }
     )

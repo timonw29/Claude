@@ -44,6 +44,23 @@ def forget(fact_substring):
     return f"Kein passender Eintrag zu '{fact_substring}' gefunden."
 
 
+def get_location():
+    if not os.path.exists(config.LOCATION_FILE):
+        return None
+    try:
+        with open(config.LOCATION_FILE, "r", encoding="utf-8") as f:
+            return json.load(f).get("city")
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def set_location(city):
+    os.makedirs(config.HISTORY_DIR, exist_ok=True)
+    with open(config.LOCATION_FILE, "w", encoding="utf-8") as f:
+        json.dump({"city": city}, f, ensure_ascii=False)
+    return f"Standort gespeichert: {city}"
+
+
 def summary_for_prompt(limit=40):
     facts = _load()
     if not facts:

@@ -136,6 +136,18 @@ TOOLS = [
             "required": ["fact_substring"],
         },
     },
+    {
+        "name": "set_location",
+        "description": (
+            "Save the user's home city/location, e.g. after they mention "
+            "where they live. Used for the weather dashboard tile."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"city": {"type": "string", "description": "City name."}},
+            "required": ["city"],
+        },
+    },
 ]
 
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
@@ -171,6 +183,8 @@ def run_tool(name, tool_input):
             return profile.list_facts()
         if name == "forget_about_user":
             return profile.forget(tool_input["fact_substring"])
+        if name == "set_location":
+            return profile.set_location(tool_input["city"])
         return f"Unbekanntes Tool: {name}"
     except Exception as e:
         return f"Fehler: {e}"

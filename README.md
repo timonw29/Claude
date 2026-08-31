@@ -131,10 +131,22 @@ Tagesablauf, Vorlieben), merkt Moni es sich selbstständig (Tools
 gespeichert in `~/.moni/profile.json`) und bezieht es in künftige Antworten
 ein - ganz ohne erneutes Nachfragen.
 
-Im Web-Modus zeigt der "Tools"-Link oben rechts ein Status-Panel: Modell,
-Anzahl gelernter Fakten, Portfolio-Größe, nächstes Briefing und die Liste
-der aktuell verfügbaren Fähigkeiten (`/api/status`) - alles echte, live
-abgefragte Werte, keine Platzhalter-Anzeigen.
+## Dashboard
+
+Im Web-Modus gibt es zwei Tabs: **Dashboard** (Kachel-Übersicht im HUD-Stil)
+und **Chat**. Alle Kacheln zeigen echte, live abgefragte Werte - keine
+Deko-Statistiken:
+
+- **Wetter** - sobald du Moni im Chat sagst, wo du wohnst (Tool
+  `set_location`, gespeichert in `~/.moni/location.json`), holt sie sich
+  aktuelle Temperatur/Bedingung über die kostenlose, schlüssellose
+  Open-Meteo-API (`moni/weather.py`).
+- **Server** - echte CPU-Last/RAM/Speicher-Auslastung deines Droplets
+  (`moni/system_stats.py`, liest `/proc/meminfo` und `os.getloadavg()`).
+- **Gedächtnis / Portfolio / Briefing / Fähigkeiten** - wie zuvor, jetzt als
+  Kacheln statt Overlay (`/api/status`).
+- **Kalender** - noch nicht angebunden, ehrlich als "nicht verbunden"
+  markiert statt mit Fake-Daten gefüllt; kommt in einer späteren Phase.
 
 ## Architektur
 
