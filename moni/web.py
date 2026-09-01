@@ -59,9 +59,12 @@ def _require_session(request: Request):
     return None
 
 
+NO_CACHE_HEADERS = {"Cache-Control": "no-cache"}
+
+
 @app.get("/login")
 def login_page():
-    return FileResponse(STATIC_DIR / "login.html")
+    return FileResponse(STATIC_DIR / "login.html", headers=NO_CACHE_HEADERS)
 
 
 @app.post("/api/login")
@@ -100,7 +103,7 @@ def logout():
 def index(request: Request):
     if not _valid_session(request):
         return RedirectResponse("/login", status_code=302)
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/oauth/google/start")
@@ -494,7 +497,9 @@ async def toggle_todo(request: Request):
 
 @app.get("/moni-core.js")
 def moni_core_js():
-    return FileResponse(STATIC_DIR / "moni-core.js", media_type="application/javascript")
+    return FileResponse(
+        STATIC_DIR / "moni-core.js", media_type="application/javascript", headers=NO_CACHE_HEADERS
+    )
 
 
 @app.post("/api/unpin")
