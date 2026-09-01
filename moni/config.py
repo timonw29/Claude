@@ -1,6 +1,6 @@
 import os
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "claude-sonnet-5"
 MODEL = os.environ.get("MONI_MODEL", DEFAULT_MODEL)
 EFFORT = os.environ.get("MONI_EFFORT", "medium")
 MAX_TOKENS = int(os.environ.get("MONI_MAX_TOKENS", "8192"))

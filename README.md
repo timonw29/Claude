@@ -37,7 +37,7 @@ Befehle im Chat: `exit` beendet, `reset` löscht den Verlauf.
 
 ## Was Moni kann
 
-- **Chat**: normale Unterhaltung über die Claude API (`claude-opus-5` als
+- **Chat**: normale Unterhaltung über die Claude API (`claude-sonnet-5` als
   Standardmodell, überschreibbar via `MONI_MODEL`).
 - **Automatisierung**: Moni kann Shell-Befehle ausführen, Dateien lesen/
   schreiben/auflisten und im Web suchen. Shell-Befehle und Schreibzugriffe
