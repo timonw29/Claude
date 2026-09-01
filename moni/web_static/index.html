@@ -860,12 +860,21 @@ if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
+function setCoreSpeaking(value) {
+  const core = document.querySelector('moni-core');
+  if (core && core.setSpeaking) core.setSpeaking(value);
+}
+
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
+  setCoreSpeaking(false);
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'de-DE';
   if (germanVoice) utter.voice = germanVoice;
+  utter.onstart = () => setCoreSpeaking(true);
+  utter.onend = () => setCoreSpeaking(false);
+  utter.onerror = () => setCoreSpeaking(false);
   window.speechSynthesis.speak(utter);
 }
 
@@ -888,6 +897,7 @@ if (SpeechRecognitionImpl) {
     // speechSynthesis here (still gesture-adjacent) so it keeps working.
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      setCoreSpeaking(false);
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     }
   };
@@ -910,6 +920,7 @@ if (SpeechRecognitionImpl) {
   micBtn.addEventListener('click', () => {
     if (recognizing) { recognizer.stop(); return; }
     window.speechSynthesis.cancel();
+    setCoreSpeaking(false);
     try { recognizer.start(); } catch (err) { /* already starting */ }
   });
 } else {

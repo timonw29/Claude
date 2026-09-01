@@ -10,6 +10,7 @@
 
   class MoniCore extends HTMLElement {
     connectedCallback() {
+      this._speaking = false;
       if (this._booted) return;
       this._booted = true;
       this.style.display = 'block';
@@ -23,6 +24,10 @@
       cancelAnimationFrame(this._raf);
       if (this._ro) this._ro.disconnect();
       if (this._renderer) this._renderer.dispose();
+    }
+
+    setSpeaking(value) {
+      this._speaking = !!value;
     }
 
     _init(THREE) {
@@ -123,16 +128,32 @@
       const tick = function () {
         el._raf = requestAnimationFrame(tick);
         const t = (performance.now() - t0) / 1000;
+        const talking = !!el._speaking;
+        const idleTarget = talking ? 0.0072 : 0.0042;
         if (!dragging) {
-          vy += (0.0042 - vy) * 0.03; vx += (0.0009 - vx) * 0.03;
+          vy += (idleTarget - vy) * 0.03; vx += (0.0009 - vx) * 0.03;
           group.rotation.y += vy; group.rotation.x += vx;
         }
-        inner.rotation.y -= 0.011; inner.rotation.x += 0.006;
-        rings.rotation.z += 0.0016; rings.children[1].rotation.z -= 0.004;
+        inner.rotation.y -= talking ? 0.02 : 0.011;
+        inner.rotation.x += talking ? 0.011 : 0.006;
+        rings.rotation.z += talking ? 0.0032 : 0.0016;
+        rings.children[1].rotation.z -= talking ? 0.008 : 0.004;
         dust.rotation.y -= 0.0009;
-        const b = 1 + Math.sin(t * 1.25) * 0.022;
+
+        // Idle: slow, shallow "breathing" pulse. Talking: faster, deeper,
+        // and irregular (two overlaid sine waves at different speeds) so it
+        // reads as chatter rather than a steady heartbeat.
+        const breathAmp = talking ? 0.055 : 0.022;
+        const breathSpeed = talking ? 4.2 : 1.25;
+        const chatter = talking ? Math.sin(t * 9.5) * 0.018 : 0;
+        const b = 1 + Math.sin(t * breathSpeed) * breathAmp + chatter;
         shell.scale.setScalar(b);
-        inner.material.emissiveIntensity = 0.7 + Math.sin(t * 2.1) * 0.28;
+
+        const emissiveBase = talking ? 1.0 : 0.7;
+        const emissiveAmp = talking ? 0.55 : 0.28;
+        const emissiveSpeed = talking ? 6.5 : 2.1;
+        inner.material.emissiveIntensity = emissiveBase + Math.sin(t * emissiveSpeed) * emissiveAmp;
+
         renderer.render(scene, camera);
       };
       tick();
