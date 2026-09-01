@@ -1,0 +1,7 @@
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Nur für den Live-/Demo-Betrieb gegen ein echtes MT5-Terminal nötig -
+# officially Windows-only (siehe mt5_connector.py). Für Backtests
+# (backtest_engine.py) wird dieses Paket nicht gebraucht.
+# MetaTrader5>=5.0.45

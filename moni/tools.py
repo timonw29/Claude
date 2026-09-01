@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 
-from . import gcalendar, gmail, goals, portfolio, profile, todos, widgets
+from . import gcalendar, gmail, goals, portfolio, profile, todos, trading_bot, widgets
 
 TOOLS = [
     {
@@ -371,6 +371,54 @@ TOOLS = [
             "required": ["title_substring"],
         },
     },
+    {
+        "name": "run_ict_backtest",
+        "description": (
+            "Run the ICT_FTMO_Bot backtest engine against historical CSV "
+            "candle data (no MT5/live account involved) and return the "
+            "performance report. Use this whenever the user wants to test "
+            "or tune the trading strategy, never to place real trades."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbol name, e.g. 'EURUSD'."},
+                "htf_csv": {
+                    "type": "string",
+                    "description": "Path to the higher-timeframe (bias/structure) CSV.",
+                },
+                "ltf_csv": {
+                    "type": "string",
+                    "description": "Path to the lower-timeframe (entry) CSV.",
+                },
+                "balance": {"type": "number", "description": "Starting balance for the backtest."},
+            },
+            "required": ["symbol", "htf_csv", "ltf_csv"],
+        },
+    },
+    {
+        "name": "ict_bot_status",
+        "description": "Check whether the live ICT_FTMO_Bot process is currently running.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "start_ict_bot",
+        "description": (
+            "Start ICT_FTMO_Bot's live trading loop as a background "
+            "process. It connects to MT5 and trades fully autonomously, "
+            "with no further confirmation per trade - only use this when "
+            "the user explicitly asks to start live/demo trading, and only "
+            "after they understand it needs a real MT5 terminal reachable "
+            "from wherever it runs (it will exit immediately with an error "
+            "on a plain Linux server without one)."
+        ),
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "stop_ict_bot",
+        "description": "Stop the running ICT_FTMO_Bot live trading process.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
 ]
 
 # Tools that touch the filesystem or run commands - callers (CLI, web app)
@@ -383,6 +431,9 @@ CONFIRM_REQUIRED = {
     "send_email",
     "create_calendar_event",
     "delete_calendar_event",
+    "run_ict_backtest",
+    "start_ict_bot",
+    "stop_ict_bot",
 }
 
 # Tools safe to run unattended (e.g. the scheduled morning briefing) - never
@@ -450,6 +501,19 @@ def run_tool(name, tool_input):
             )
         if name == "delete_calendar_event":
             return gcalendar.delete_event_by_title(tool_input["title_substring"])
+        if name == "run_ict_backtest":
+            return trading_bot.run_backtest(
+                tool_input["symbol"],
+                tool_input["htf_csv"],
+                tool_input["ltf_csv"],
+                tool_input.get("balance", 10000.0),
+            )
+        if name == "ict_bot_status":
+            return trading_bot.bot_status()
+        if name == "start_ict_bot":
+            return trading_bot.start_live_bot()
+        if name == "stop_ict_bot":
+            return trading_bot.stop_live_bot()
         if name == "propose_code_change":
             from . import self_dev  # local import: heavier optional dependency
 

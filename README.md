@@ -271,6 +271,36 @@ sind unkritisch und laufen ohne Rückfrage. `send_email`,
 Chat), da sie nach außen sichtbare bzw. schwer rückgängig zu machende
 Wirkung haben.
 
+## ICT-Trading-Bot (optional, eigenständiges Projekt)
+
+`ICT_FTMO_Bot/` ist ein regelbasierter Trading-Bot nach Standard-ICT-Konzepten
+(Market Structure, Liquidity, Fair Value Gaps, Order Blocks, Discount/
+Premium, Optimal Trade Entry, Confluence-Scoring) mit eigenem
+Backtest-Framework und MT5-Anbindung - ein komplett separates Python-Projekt
+mit eigener `requirements.txt`, das Moni nur als Prozess steuert, siehe
+`ICT_FTMO_Bot/README.md` für Details, Architektur und Setup.
+
+**Ehrlich gesagt:** Das sind gängige, öffentlich bekannte ICT-Definitionen,
+selbst implementiert - **keine** geprüfte, garantiert profitable Strategie.
+Erst per `run_ict_backtest` gegen historische Daten testen, dann auf einem
+MT5-Demokonto laufen lassen, bevor überhaupt an ein echtes/FTMO-Konto zu
+denken ist.
+
+**Werkzeuge:** `run_ict_backtest` (Strategie gegen CSV-Daten testen, kein
+echtes Konto beteiligt), `ict_bot_status` (läuft der Live-Prozess gerade?),
+`start_ict_bot`/`stop_ict_bot` (Live-Loop starten/stoppen). Alle außer
+`ict_bot_status` sind bestätigungspflichtig - `start_ict_bot` besonders
+wichtig, weil der Bot danach **vollautonom** handelt, ohne Rückfrage pro
+Trade.
+
+**Technische Einschränkung:** Das offizielle `MetaTrader5`-Python-Paket
+läuft nur mit einem echten, laufenden MT5-Terminal - offiziell nur unter
+Windows. Auf dem Linux-Droplet, auf dem Moni selbst läuft, startet
+`start_ict_bot` den Prozess zwar, der beendet sich dort aber sofort wieder
+mit einem klaren Fehler, weil kein MT5-Terminal erreichbar ist. Für echten
+Demo-/Live-Betrieb muss `ICT_FTMO_Bot/` auf einer Windows-Maschine/VM (oder
+einem Wine-Setup) mit installiertem MT5-Terminal laufen.
+
 ## Selbst-Weiterentwicklung
 
 Moni kann sich selbst weiterentwickeln - aber nie unbeaufsichtigt. Zwei Wege:

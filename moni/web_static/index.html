@@ -793,6 +793,9 @@ const CONFIRM_LABELS = {
   send_email: 'Moni möchte eine E-Mail senden:',
   create_calendar_event: 'Moni möchte einen Kalendertermin anlegen:',
   delete_calendar_event: 'Moni möchte einen Kalendertermin löschen:',
+  run_ict_backtest: 'Moni möchte einen Trading-Backtest ausführen (keine echten Trades):',
+  start_ict_bot: 'Moni möchte den ICT-Trading-Bot LIVE starten (vollautonom, keine weitere Rückfrage pro Trade):',
+  stop_ict_bot: 'Moni möchte den laufenden ICT-Trading-Bot stoppen:',
 };
 
 function confirmDetail(tool, input) {
@@ -802,6 +805,8 @@ function confirmDetail(tool, input) {
   if (tool === 'send_email') return `An: ${input.to}\nBetreff: ${input.subject}\n\n${input.body}`;
   if (tool === 'create_calendar_event') return `${input.summary}\n${input.start_iso} – ${input.end_iso}`;
   if (tool === 'delete_calendar_event') return input.title_substring || '';
+  if (tool === 'run_ict_backtest') return `${input.symbol}: ${input.htf_csv} / ${input.ltf_csv}`;
+  if (tool === 'start_ict_bot' || tool === 'stop_ict_bot') return '';
   return JSON.stringify(input);
 }
 
