@@ -58,13 +58,24 @@ Befehle im Chat: `exit` beendet, `reset` löscht den Verlauf.
 ## Web-Modus (Browser-Chat mit Login)
 
 Für den dauerhaften Zugriff vom Handy/iPad aus gibt es `moni.web`: eine
-passwortgeschützte Weboberfläche, die denselben Agenten-Kern nutzt. Shell-
-Befehle und Schreibzugriffe zeigen dabei "Erlauben/Ablehnen"-Buttons statt
-einer Terminal-Rückfrage.
+passwortgeschützte Weboberfläche (das Nocturne-Dashboard).
+
+**Wichtig, seit dem Hermes-Umzug:** Der Chat im Web-Modus läuft nicht mehr
+über einen eigenen, in `moni/` gebauten Agenten-Loop, sondern über eine
+Bridge (`moni/hermes_client.py`) zu einer separat installierten
+[Hermes-Agent](https://github.com/NousResearch/hermes-agent)-Instanz -
+siehe `hermes_skills/README.md` für die volle Einrichtung. Hermes führt
+Tools/Skills dabei serverseitig automatisch aus; **es gibt im Web-Modus
+keine Erlauben/Ablehnen-Buttons mehr** (die gab es vorher, für
+`run_shell_command`/`write_file` & Co. - das war ein bewusst in Kauf
+genommener Trade-off beim Umzug, siehe `hermes_skills/README.md`). Ohne
+laufende Hermes-Instanz + `HERMES_API_KEY`/`HERMES_API_URL` in `.env`
+antwortet der Chat mit einer Fehlermeldung.
 
 ```bash
 export MONI_WEB_PASSWORD='ein-starkes-passwort'
-export ANTHROPIC_API_KEY='...'
+export HERMES_API_KEY='...'
+export ANTHROPIC_API_KEY='...'  # nur noch für self_dev.py (Selbst-Weiterentwicklung)
 uvicorn moni.web:app --host 0.0.0.0 --port 8010
 ```
 
@@ -212,11 +223,11 @@ Chat-Bereich - kein separates Dashboard/Chat-Tab-Umschalten mehr.
 in der Edit-Leiste). Das Layout wird bewusst nicht gespeichert - jeder
 Seitenaufruf startet wieder mit der Standardanordnung.
 
-**Kacheln reagieren auf das Gespräch:** Wenn eine Chat-Antwort ein Tool
-benutzt (z. B. Portfolio ändern, ein Ziel aktualisieren, eine Aufgabe
-abhaken), liefert `/api/chat`/`/api/confirm` mit `tools_used` zurück,
-welches Tool das war. Das Frontend hebt die passende Kachel dann kurz
-hervor (Glow in Akzentfarbe, ca. 6 Sekunden).
+**Kacheln aktualisieren sich nach jeder Chat-Antwort** (Hermes kann über
+seine eigenen Tools/Skills Portfolio, Aufgaben, Ziele usw. geändert haben),
+aber ohne Hervorhebung, welche Kachel konkret gemeint war - das setzte
+voraus, dass wir sehen, welches Tool benutzt wurde, was die
+Hermes-API (nicht-streamend) nicht mitliefert.
 
 Die frei anheftbaren Pins (`pin_to_dashboard`/`unpin_from_dashboard`,
 `~/.moni/widgets.json`) sind Teil dieses neuen Kachel-Sets nicht mehr -
@@ -264,12 +275,13 @@ Nach der Google-Anmeldung/Zustimmung wird der Token in
 `~/.moni/google_token.json` gespeichert und automatisch erneuert - die
 Anmeldung ist einmalig.
 
-**Werkzeuge, sobald verbunden:** `list_unread_emails`, `list_todays_events`
-sind unkritisch und laufen ohne Rückfrage. `send_email`,
-`create_calendar_event` und `delete_calendar_event` sind wie
-`run_shell_command` bestätigungspflichtig (Erlauben/Ablehnen-Dialog im
-Chat), da sie nach außen sichtbare bzw. schwer rückgängig zu machende
-Wirkung haben.
+**Werkzeuge (`list_unread_emails`, `send_email`, `list_todays_events`,
+`create_calendar_event`, `delete_calendar_event`) leben in `moni/tools.py`**
+und sind seit dem Hermes-Umzug im Web-Modus nicht mehr aufrufbar (der
+Chat läuft dort über Hermes, das diese Tools nicht kennt) - nur noch im
+CLI-Modus (`python -m moni`) verfügbar, dort weiterhin
+bestätigungspflichtig wie `run_shell_command`. Die Termine-Kachel selbst
+funktioniert unabhängig davon weiter, siehe `hermes_skills/README.md`.
 
 ## ICT-Trading-Bot (optional, eigenständiges Projekt)
 
@@ -286,12 +298,14 @@ Erst per `run_ict_backtest` gegen historische Daten testen, dann auf einem
 MT5-Demokonto laufen lassen, bevor überhaupt an ein echtes/FTMO-Konto zu
 denken ist.
 
-**Werkzeuge:** `run_ict_backtest` (Strategie gegen CSV-Daten testen, kein
-echtes Konto beteiligt), `ict_bot_status` (läuft der Live-Prozess gerade?),
-`start_ict_bot`/`stop_ict_bot` (Live-Loop starten/stoppen). Alle außer
-`ict_bot_status` sind bestätigungspflichtig - `start_ict_bot` besonders
-wichtig, weil der Bot danach **vollautonom** handelt, ohne Rückfrage pro
-Trade.
+**Werkzeuge:** `run_ict_backtest`, `ict_bot_status`, `start_ict_bot`,
+`stop_ict_bot` leben in `moni/tools.py` und sind seit dem Hermes-Umzug im
+Web-Modus nicht mehr aufrufbar - nur noch im CLI-Modus, dort weiterhin
+bestätigungspflichtig (außer `ict_bot_status`). **Im Hermes-Web-Modus**
+übernimmt stattdessen die `ict-trading-bot`-Skill (`hermes_skills/finance/
+ict-trading-bot/`) dieselbe Aufgabe - dort aber **ohne** Bestätigungsdialog
+(siehe Sicherheits-Trade-off in `hermes_skills/README.md`); `start_ict_bot`
+lässt den Bot danach **vollautonom** handeln, ohne Rückfrage pro Trade.
 
 **Technische Einschränkung:** Das offizielle `MetaTrader5`-Python-Paket
 läuft nur mit einem echten, laufenden MT5-Terminal - offiziell nur unter
@@ -305,14 +319,12 @@ einem Wine-Setup) mit installiertem MT5-Terminal laufen.
 
 Moni kann sich selbst weiterentwickeln - aber nie unbeaufsichtigt. Zwei Wege:
 
-- **Auf Zuruf**: Bittest du sie im Chat um eine Code-Änderung/ein neues
-  Feature ("Moni, füg X hinzu"), ruft sie über `propose_code_change`
-  (`moni/self_dev.py`) den echten **Claude Agent SDK** auf - eine vollwertige
-  Coding-Agent-Sitzung mit Datei- und Terminal-Zugriff auf ihren eigenen
-  Code. Sie arbeitet dabei **immer auf einem neuen Git-Branch**, committet
-  dort, aber **pusht/merged/deployed nichts von selbst** - das entscheidest
-  du. Wie `run_shell_command`/`write_file` ist das ein bestätigungspflichtiges
-  Tool (Erlauben/Ablehnen-Dialog im Chat).
+- **Auf Zuruf**: Das `propose_code_change`-Tool (`moni/self_dev.py`, ruft
+  den echten **Claude Agent SDK** auf) lebt in `moni/tools.py` und ist seit
+  dem Hermes-Umzug im Web-Modus **nicht mehr über den Chat auslösbar** -
+  nur noch im CLI-Modus, dort weiterhin bestätigungspflichtig. Im
+  Hermes-Web-Modus müsste eine eigene Skill dafür gebaut werden (noch nicht
+  passiert, siehe `hermes_skills/README.md`).
 - **Proaktiv, wöchentlich**: Jeden Montag um `MONI_SELFDEV_TIME` (Standard
   `08:30`) schaut sich Moni automatisch ihren eigenen Code an und schlägt bis
   zu drei Verbesserungen vor - rein lesend, ohne Änderungen. Der Vorschlag

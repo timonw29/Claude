@@ -14,6 +14,13 @@ services:
     volumes:
       - .:/repo
       - moni_data:/root/.moni
+    # Lässt den Container "host.docker.internal" auf die Docker-Host-IP
+    # auflösen (Docker Engine 20.10+, Linux). Gebraucht für die
+    # Hermes-Agent-Bridge (HERMES_API_URL in .env) - Hermes läuft mit
+    # network_mode: host in seinem eigenen Compose-Stack und ist deshalb
+    # NICHT über "127.0.0.1" aus diesem Container erreichbar.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Fall B (Reverse-Proxy läuft direkt auf dem Host, nicht containerisiert):
     # bindet nur an localhost des Droplets - dein Host-Caddy/nginx spricht
     # dann mit http://127.0.0.1:8010.

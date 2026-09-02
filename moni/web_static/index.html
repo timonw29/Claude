@@ -196,22 +196,6 @@
   .msg-briefing .msg-tag { color: #ffb347; }
   .msg-selfdev .msg-tag { color: var(--accent-light); }
 
-  .confirm-box {
-    align-self: flex-start; background: #14151f; border: 1px solid rgba(145,132,217,.4);
-    border-radius: 10px; padding: 10px 12px; max-width: 92%;
-  }
-  .confirm-box .label { color: var(--text-dim); font-size: 11.5px; }
-  .confirm-box code {
-    display: block; background: #0d0e15; padding: 8px 10px; border-radius: 7px; margin: 7px 0;
-    overflow-x: auto; font-size: 12px; color: var(--accent-light); border: 1px solid var(--tile-border);
-  }
-  .confirm-buttons { display: flex; gap: 8px; margin-top: 4px; }
-  .confirm-buttons button {
-    flex: 1; padding: 7px; border-radius: 7px; border: none; font-weight: 600; font-size: 12px;
-    cursor: pointer; font-family: 'Inter';
-  }
-  .btn-allow { background: linear-gradient(90deg, #3ddc84, #00c2b8); color: #05210f; }
-  .btn-deny { background: linear-gradient(90deg, #ff6b6b, #ff3d81); color: #2a0808; }
 
   .thinking { align-self: flex-start; display: flex; gap: 4px; padding: 4px 2px; }
   .thinking span {
@@ -671,28 +655,6 @@ editToggle.addEventListener('click', () => {
   renderGrid();
 });
 
-/* ---- Topic emphasis when a tile's subject comes up in chat ---- */
-const TOOL_TO_TILE = {
-  list_portfolio: 'portfolio', add_portfolio_position: 'portfolio', remove_portfolio_position: 'portfolio',
-  remember_about_user: 'gedaechtnis', recall_about_user: 'gedaechtnis', forget_about_user: 'gedaechtnis',
-  set_location: 'wetter',
-  list_todos: 'aufgaben', add_todo: 'aufgaben', complete_todo: 'aufgaben', remove_todo: 'aufgaben',
-  list_goals: 'ziele', set_goal: 'ziele', update_goal_progress: 'ziele', remove_goal: 'ziele',
-  list_todays_events: 'termine', create_calendar_event: 'termine', delete_calendar_event: 'termine',
-};
-
-function emphasizeTiles(toolsUsed) {
-  if (!toolsUsed || !toolsUsed.length) return;
-  const ids = new Set(toolsUsed.map(t => TOOL_TO_TILE[t]).filter(Boolean));
-  ids.forEach(id => {
-    const el = document.getElementById('tile-' + id);
-    if (!el) return;
-    el.classList.add('emphasize');
-    setTimeout(() => el.classList.remove('emphasize'), 6000);
-  });
-  if (ids.size) loadStatus();
-}
-
 /* =========================================================
    Status polling
    ========================================================= */
@@ -786,64 +748,6 @@ function addThinking() {
   return div;
 }
 
-const CONFIRM_LABELS = {
-  run_shell_command: 'Moni möchte einen Befehl ausführen:',
-  write_file: 'Moni möchte eine Datei schreiben:',
-  propose_code_change: 'Moni möchte sich selbst weiterentwickeln (neuer Git-Branch, kein Deploy):',
-  send_email: 'Moni möchte eine E-Mail senden:',
-  create_calendar_event: 'Moni möchte einen Kalendertermin anlegen:',
-  delete_calendar_event: 'Moni möchte einen Kalendertermin löschen:',
-  run_ict_backtest: 'Moni möchte einen Trading-Backtest ausführen (keine echten Trades):',
-  start_ict_bot: 'Moni möchte den ICT-Trading-Bot LIVE starten (vollautonom, keine weitere Rückfrage pro Trade):',
-  stop_ict_bot: 'Moni möchte den laufenden ICT-Trading-Bot stoppen:',
-};
-
-function confirmDetail(tool, input) {
-  if (tool === 'run_shell_command') return input.command || '';
-  if (tool === 'write_file') return input.path || '';
-  if (tool === 'propose_code_change') return input.description || '';
-  if (tool === 'send_email') return `An: ${input.to}\nBetreff: ${input.subject}\n\n${input.body}`;
-  if (tool === 'create_calendar_event') return `${input.summary}\n${input.start_iso} – ${input.end_iso}`;
-  if (tool === 'delete_calendar_event') return input.title_substring || '';
-  if (tool === 'run_ict_backtest') return `${input.symbol}: ${input.htf_csv} / ${input.ltf_csv}`;
-  if (tool === 'start_ict_bot' || tool === 'stop_ict_bot') return '';
-  return JSON.stringify(input);
-}
-
-function addConfirm(tool, input) {
-  const box = document.createElement('div');
-  box.className = 'confirm-box';
-
-  const label = document.createElement('div');
-  label.className = 'label';
-  label.textContent = CONFIRM_LABELS[tool] || `Moni möchte "${tool}" ausführen:`;
-  box.appendChild(label);
-
-  const code = document.createElement('code');
-  code.textContent = confirmDetail(tool, input);
-  box.appendChild(code);
-
-  const buttons = document.createElement('div');
-  buttons.className = 'confirm-buttons';
-
-  const allow = document.createElement('button');
-  allow.className = 'btn-allow';
-  allow.textContent = 'Erlauben';
-  const deny = document.createElement('button');
-  deny.className = 'btn-deny';
-  deny.textContent = 'Ablehnen';
-
-  allow.onclick = () => resolveConfirm(true, box);
-  deny.onclick = () => resolveConfirm(false, box);
-
-  buttons.appendChild(allow);
-  buttons.appendChild(deny);
-  box.appendChild(buttons);
-
-  chatLog.appendChild(box);
-  scrollDown();
-}
-
 function setBusy(busy) {
   sendBtn.disabled = busy;
   textEl.disabled = busy;
@@ -930,13 +834,14 @@ if (SpeechRecognitionImpl) {
 
 function handleResult(data, thinkingEl) {
   if (thinkingEl) thinkingEl.remove();
-  if (data.status === 'confirm') {
-    addConfirm(data.tool, data.input);
-  } else if (data.status === 'reply') {
+  if (data.status === 'reply') {
     addBubble('moni', data.text);
     setBusy(false);
     speak(data.text);
-    emphasizeTiles(data.tools_used);
+    // Hermes may have changed portfolio/todos/goals/etc. via its own tools -
+    // refresh the tiles, just without knowing which one to highlight (the
+    // API doesn't expose which tools fired for a non-streaming reply).
+    loadStatus();
   } else {
     addSystem('[Fehler] ' + (data.text || 'Unbekannter Fehler'));
     setBusy(false);
@@ -954,14 +859,6 @@ async function api(path, body) {
     throw new Error('unauthenticated');
   }
   return res.json();
-}
-
-async function resolveConfirm(approved, box) {
-  box.querySelectorAll('button').forEach(b => b.disabled = true);
-  const thinkingEl = addThinking();
-  setBusy(true);
-  const data = await api('/api/confirm', { approved });
-  handleResult(data, thinkingEl);
 }
 
 async function sendMessage(text) {

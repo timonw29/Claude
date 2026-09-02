@@ -22,6 +22,14 @@ ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
 
+# Hermes Agent bridge: the Nocturne dashboard talks to this OpenAI-compatible
+# endpoint instead of calling Anthropic directly. Hermes owns the agent loop,
+# tools, and skills (moni-assistant, ict-trading-bot) on its side - see
+# hermes_skills/README.md. HERMES_API_KEY must match Hermes' own
+# API_SERVER_KEY (~/.hermes/.env on the Hermes side).
+HERMES_API_URL = os.environ.get("HERMES_API_URL", "http://127.0.0.1:8642/v1/chat/completions")
+HERMES_API_KEY = os.environ.get("HERMES_API_KEY")
+
 # Google OAuth (Gmail + Kalender) - siehe README für die Einrichtung in der
 # Google Cloud Console. GOOGLE_REDIRECT_URI muss exakt der Redirect-URI
 # entsprechen, die dort als "Authorized redirect URI" hinterlegt ist.
